@@ -17,8 +17,8 @@ d = char(datetime('today'));
 
 % Input: a set file which needs to be changed in cfg.name
 
-sub  = {'02', '03', '04', '05', '06','08', '09', '10', '11', '12', '13', '14', '15', '16','17','19', '20','21','22','24','25','26','27','28','29','30'};
-%sub  = {'02','03'};
+%sub  = {'02', '03', '04', '05', '06','08', '09', '10', '11', '12', '13', '14', '15', '16','17','19', '20','21','22','24','25','26','27','28','29','30'};
+sub  = {'02'};
 dir  = '/Users/dhewitt/Data/pps/';
 conds = {'cond-b1', 'deval-b1', 'cond-b2', 'deval-b2'}; %order of saving
 cues = {'left', 'right', 'middle'};
@@ -38,8 +38,8 @@ ERDall = zeros(32,numel([freqStart:freqEnd]),numel([epochStart:epochSteps:epochE
 for iSub=1:numel(sub)
     currentSubject = sub{iSub};
 
-    wname = [fullfile(dir, ['P', currentSubject, '/P', currentSubject, '_allepoched_cleaned0910.set'])];
-    subOutname = [fullfile(dir, ['P', currentSubject, '/P', currentSubject, '_allspa_cues0910.mat'])];
+    wname = [fullfile(dir, ['P', currentSubject, '/P', currentSubject, '_allepoched_cleaned_2702.set'])];
+    subOutname = [fullfile(dir, ['P', currentSubject, '/P', currentSubject, '_allspa_cues_2702_oldcode.mat'])];
 
     % Check if the file exists
     if exist(wname) == 0

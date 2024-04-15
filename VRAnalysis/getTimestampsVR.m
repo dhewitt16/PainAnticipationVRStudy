@@ -2,6 +2,7 @@
 % and returns a .csv file containing the trial conditions, cues, and
 % timestamps. 
 % Use is getTimestampsVR('/Users/dhewitt/Data/pps/P02/P02___Control_Data__.json','/Users/dhewitt/Data/pps/P02/P02_Extracted',true)
+% Updated to correct the number of trials in cond and extn blocks 15/4
 
 function [condTable] = getTimestampsVR(input, output, dispOption)
 %  GETTIMESTAMPSVR Brief summary of this function.
@@ -53,8 +54,8 @@ for i = 1:numTrials
 end
 
 if numTrials == 360
-    condorder = sort([repelem([1,3],108)'; repelem([2,4],72)']);
-    values = [1:108,1:72,1:108,1:72]';
+    condorder = sort([repelem([1,3],72)'; repelem([2,4],108)']);
+    values = [1:72,1:108,1:72,1:108]';
 else
     disp('Some blocks missing - trial numbers not added - check data log')
     condorder = zeros(numTrials,2);
