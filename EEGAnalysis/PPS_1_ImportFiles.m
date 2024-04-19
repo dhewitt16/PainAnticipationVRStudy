@@ -10,8 +10,8 @@ eeglab_path = '/Users/dhewitt/Analysis/eeglab2022.1/';
 addpath(genpath(eeglab_path));
 
 %Specify subjects and main directory where data is stored
-%subjects = {'02', '03', '04', '05', '06', '08', '09', '10', '11', '12', '13', '14', '15', '16'};
-subjects = {'17','19', '20','21','22','24','25','26','27','28','29','30'};
+%subjects = {'02', '03', '04', '05', '06', '08', '09', '10', '11', '12', '13', '14', '15', '16','17','19', '20','21','22','24','25','26','27','28','29','30'};
+subjects = {'29','30'};
 mainDirectory = '/Users/dhewitt/Data/pps/';
 
 [ALLEEG EEG CURRENTSET ALLCOM] = eeglab;
@@ -21,7 +21,7 @@ for i = 1:size(subjects,2)
     currentSubject = subjects{i};
 
     % Looping over all EEG files
-    currentDirectory = [mainDirectory 'P' currentSubject '/'];
+    currentDirectory = [mainDirectory 'P' currentSubject '/backuP/'];
     EEGfiles =  dir(fullfile(currentDirectory, '*.vhdr')); %finding all EEG files in subject folder
     for j = 1:length(EEGfiles)
     currentEEGFile = EEGfiles(j).name; %defining current EEG file for import
