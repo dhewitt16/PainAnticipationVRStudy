@@ -6,19 +6,28 @@
 
 % Danielle Hewitt (created 14/08/2023, updated 06/03/24 to remove perm)
 
-close all; clear all;
+close all; %clear all;
 
 %=====================================================================
 % Set paths for EEGLAB AND FIELDTRIP
+% eeglab_path = '/Users/dhewitt/Analysis/eeglab2023.1/'; addpath(eeglab_path);
+% fieldtrip_path = '/Users/dhewitt/Analysis/fieldtrip-20220707/'; addpath(fieldtrip_path); ft_defaults;
+
 eeglab_path = '/Users/dhewitt/Analysis/eeglab2023.1/'; addpath(eeglab_path);
-fieldtrip_path = '/Users/dhewitt/Analysis/fieldtrip-20220707/'; addpath(fieldtrip_path); ft_defaults;
+fieldtrip_path = '/Users/dhewitt/Analysis/fieldtrip-20240110/'; addpath(fieldtrip_path); ft_defaults;
 % %=====================================================================
 
-erdScale = [-20 20]; % scale for all maps - theta usually -30 30, alpha -20 20, beta -15 15
-freq = [8 12]; % frequency band - change to 4 7 for theta, 8 12 for alpha, 16 24 for beta
-topoTimeWindow = [0 2.8; 0.8 2.8]; % time windows for topographies. 1 sets topo for fig 1, 2 sets time window for figs 2+
+erdScale = [-15 15]; % scale for all maps - theta usually -30 30, alpha -20 20, beta -15 15
+freq = [16 24]; % frequency band - change to 4 7 for theta, 8 12 for alpha, 16 24 for beta
+topoTimeWindow = [1.8 2.8; 0.8 2.8]; % time windows for topographies. 1 sets topo for fig 1, 2 sets time window for figs 2+
 tfTimeWindow = [-2 2.8]; % time window for time frequency plots
 timewindows = [0.5 1.5; 0.8 1.79; 1.8 2.8];
+
+frontal = {'Fp1', 'Fp2', 'Fz'};
+central = {'FC5', 'FC1', 'FC2', 'FC6', 'C3', 'Cz', 'C4'};
+parietal = {'CP5', 'CP1', 'CP2', 'CP6', 'P7', 'P3', 'Pz', 'P4', 'P8'};
+occipital = {'O1','O2', 'Oz'}; %optional electrode clusters
+
 % =================================================================
 
 conds = {'cond-b1', 'deval-b1', 'cond-b2', 'deval-b2'}; %order of saving
@@ -26,6 +35,8 @@ cues = {'left', 'right', 'middle'};
 lfirst=[3,5,9,11,13,15,17,19,21,25,27,29];
 rfirst=[2,4,6,8,10,12,14,16,20,22,24,26,28,30];
 allsubs=sort([3,5,9,11,13,15,17,19,21,25,27,29,2,4,6,8,10,12,14,16,20,22,24,26,28,30]);
+
+el = central; %type in electrodes themselves or choose a cluster
 
 %=====================================================================
 
@@ -37,6 +48,20 @@ allt = [nearest(PPStime,tfTimeWindow(1)), nearest(PPStime,tfTimeWindow(2))];
 s1=nearest(PPSfreq,freq(1)); s2=nearest(PPSfreq,freq(2));
 
 %%%%%%%%%%%%%%%%%%%%%%%
+
+%==========================================================================
+%This section extrxts the indices of all valid electrode labels in cfg.els
+
+EL = [];
+for j=1:size(el,2)
+    for k=1:32
+        if strcmp(el{j},E(k).labels)==1
+            EL = [EL k];
+        end
+    end
+end
+
+%==========================================================================
 
 v = squeeze(mean(GERDall(:,s1:s2,t1:t2,:,:,:),2)); v=squeeze(mean(v,2)); bv=squeeze(mean(v,3));
 
@@ -65,8 +90,6 @@ allNeutral = (condNonPain+devalNonPain)./2; allNeutral = mean(allNeutral,2);
 subplot(1,2,1); topoplot(allPain,E,'style','map','maplimits',erdScale); title('Pain-related Cues'); colorbar;
 subplot(1,2,2); topoplot(allNeutral,E,'style','map','maplimits',erdScale); title('Neutral Cues'); colorbar;
 
-
-
 %%%%%%%%%%%%%%%%%%%%%%%
 
 t1=nearest(PPStime,topoTimeWindow(2,1)); t2=nearest(PPStime,topoTimeWindow(2,2));
@@ -90,9 +113,9 @@ subplot(2,3,6); topoplot(mean(devalNonPain,2),E,'style','map','maplimits',erdSca
 
 %%%%%%%%%%%%%%%%%%%%%%%
 
-figure('Name','TFR plots averaged over all electrodes');
+figure('Name','TFR plots averaged over chosen electrodes');
 
-GAPall = squeeze(mean(GERDall,1));
+GAPall = squeeze(mean(GERDall(EL,:,:,:,:,:),1));
 conderd = squeeze(mean(squeeze(GAPall(:,:,[1,3],:,:)),5)); conderd = squeeze(mean(conderd,3));
 devalerd = squeeze(mean(squeeze(GAPall(:,:,[2,4],:,:)),5)); devalerd = squeeze(mean(devalerd,3));
 
@@ -115,41 +138,45 @@ ExtnPain = squeeze(mean(tfr(s1:s2,:),1));
 tfr=squeeze(devalerd(:,:,3));
 subplot(2,2,4); imagesc(tfr,erdScale); ax=gca; ax.XLim = allt; ax.YLim = [1 50]; set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title('Extinction, Neutral cues'); colorbar;
 hold on; line([26 26], [1 50], 'Color', 'k', 'LineWidth', 1); hold on; line([34 34], [1 50], 'Color', 'k', 'LineWidth', 1); hold off;  axis xy; ax.XTick = sample_ticks; ax.XTickLabel = time_ticks; xlabel('Time (s)');
-colormap(jet); 
+colormap(jet);
 ExtnNeutral = squeeze(mean(tfr(s1:s2,:),1));
 
 %%%%%%%%%%%%%%%%%%%%%%%
 
-%Figure 1 plots ERD curves in 2 electrodes and 2 bands
-figure('Name','ERD curves');
-%c=0;
-%    for band = 1:2
-%for i=1:4 %conditions
-% c=c+1;
-%subplot(2,4,c);
-% subplot(1,4,c);
-plot(PPStime,CondPain,'LineWidth',2,'Color',[0.98 0.64 0.6]); 
-hold on;
-plot(PPStime,ExtnPain,'--','LineWidth',2,'Color',[0.98 0.64 0.6]); b.FaceColor = "#D95319";
-hold on;
-plot(PPStime,CondNeutral,'LineWidth',2,'Color',[0.26 0.68 0.78]);
-hold on;
-plot(PPStime,ExtnNeutral,'--','LineWidth',2,'Color',[0.26 0.68 0.78]);
-axis([-2 2.8 erdScale]);
-hold on;
-line([0 0], [-50 50], 'Color', 'k', 'LineWidth', 1);
-hold on;
-line([0.8 0.8], [-50 50], 'Color', 'k', 'LineWidth', 1);
-legend('Conditioning Pain Cue','Extinction Pain Cue','Conditioning Neutral Cue','Extinction Neutral Cue','Cue onset','Cue offset','Location','best');
-xlabel('Time (s)');
-set(gca,'fontsize', 14) ;
-% title([conds{i} '  ' num2str(inds(band,1)) '-' num2str(inds(band,2)) ' Hz']);
-%end
-%  end
+erdScale = [-10 10];
 
+figure('Name','ERD curve in selected electrodes');
+subplot(2,2,1);
+plot(PPStime,CondPain,'LineWidth',2,'Color',[0.98 0.64 0.6]); hold on;
+plot(PPStime,ExtnPain,'--','LineWidth',2,'Color',[0.98 0.64 0.6]); b.FaceColor = "#D95319"; hold on;
+plot(PPStime,CondNeutral,'LineWidth',2,'Color',[0.26 0.68 0.78]); hold on;
+plot(PPStime,ExtnNeutral,'--','LineWidth',2,'Color',[0.26 0.68 0.78]); hold on;
+axis([-2 2.8 erdScale]); hold on;
+line([0 0], [-50 50], 'Color', 'k', 'LineWidth', 1); hold on;
+line([0.8 0.8], [-50 50], 'Color', 'k', 'LineWidth', 1); 
+xlabel('Time (s)'); title('Interaction Cues x Cond'); set(gca,'fontsize', 14) ;
+
+painCues = (CondPain+ExtnPain)./2; neutCues = (CondNeutral+ExtnNeutral)./2;
+
+subplot(2,2,2);
+plot(PPStime,painCues,'LineWidth',2,'Color',[0.98 0.64 0.6]); hold on;
+plot(PPStime,neutCues,'--','LineWidth',2,'Color',[0.98 0.64 0.6]); b.FaceColor = "#D95319"; hold on;
+axis([-2 2.8 erdScale]); hold on; 
+line([0 0], [-50 50], 'Color', 'k', 'LineWidth', 1); hold on;
+line([0.8 0.8], [-50 50], 'Color', 'k', 'LineWidth', 1); 
+xlabel('Time (s)'); title('Pain vs Neutral'); set(gca,'fontsize', 14) ;legend('Pain','Neut');
+
+allCond = (CondPain+CondNeutral)./2; allExt = (ExtnPain+ExtnNeutral)./2;
+
+subplot(2,2,3);
+plot(PPStime,allCond,'LineWidth',2,'Color',[0.98 0.64 0.6]); hold on;
+plot(PPStime,allExt,'--','LineWidth',2,'Color',[0.98 0.64 0.6]); b.FaceColor = "#D95319"; hold on;
+axis([-2 2.8 erdScale]); hold on;
+line([0 0], [-50 50], 'Color', 'k', 'LineWidth', 1); hold on;
+line([0.8 0.8], [-50 50], 'Color', 'k', 'LineWidth', 1); 
+xlabel('Time (s)'); title('Cond vs Extinction'); set(gca,'fontsize', 14) ; legend('Cond','Ext');
 
 %%%%%%%%%%%%%%%%%%%%%%%
-
 
 figure('Name','TFR plots grand averaged over all electrodes');
 
@@ -163,7 +190,7 @@ colormap(jet); set(gca,'fontsize', 14) ;
 %%%%%%%%%%%%%%%%%%%%%%%
 
 
-figure('Name','TFR plots averaged over all electrodes - Cond, Extn, Pain, Neut');
+figure('Name','TFR plots averaged over chosen electrodes - Cond, Extn, Pain, Neut');
 tfr=squeeze(mean(conderd,3));
 subplot(2,2,1); imagesc(tfr,erdScale); ax=gca; ax.XLim = allt; ax.YLim = [1 50]; set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title('Conditioning all cues'); colorbar;
 hold on; line([26 26], [1 50], 'Color', 'k', 'LineWidth', 1); hold on; line([34 34], [1 50], 'Color', 'k', 'LineWidth', 1); hold off; axis xy; % adds lines at cue start and end
@@ -205,21 +232,21 @@ TrightCleft = (rightleftdeval1+rightleftdeval2)./2; %incong right
 
 figure('Name','TFR plots for tonic pain-cue site interaction, averaged over all electrodes');
 subplot(2,2,1);
-imagesc(squeeze(mean(TleftCleft,1)),erdScale); ax=gca; ax.XLim = allt; ax.YLim = [1 50];set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title(['Pain L Cue L']); colorbar;
+imagesc(squeeze(mean(TleftCleft(EL,:,:),1)),erdScale); ax=gca; ax.XLim = allt; ax.YLim = [1 50];set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title(['Pain L Cue L']); colorbar;
 hold on; line([26 26], [1 50], 'Color', 'k', 'LineWidth', 1); hold on; line([34 34], [1 50], 'Color', 'k', 'LineWidth', 1); hold off; axis xy; % adds lines at cue start and end
 
 sample_ticks = ax.XLim(1):10:ax.XLim(2); time_ticks = PPStime(sample_ticks); ax.XTick = sample_ticks; ax.XTickLabel = time_ticks; xlabel('Time (s)');
 
 subplot(2,2,4);
-imagesc(squeeze(mean(TleftCright,1)),erdScale); ax=gca; ax.XLim = allt; ax.YLim = [1 50]; set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title(['Pain L Cue R']); colorbar;
+imagesc(squeeze(mean(TleftCright(EL,:,:),1)),erdScale); ax=gca; ax.XLim = allt; ax.YLim = [1 50]; set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title(['Pain L Cue R']); colorbar;
 hold on; line([26 26], [1 50], 'Color', 'k', 'LineWidth', 1); hold on; line([34 34],[1 50], 'Color', 'k', 'LineWidth', 1); hold off; axis xy; ax.XTick = sample_ticks; ax.XTickLabel = time_ticks; xlabel('Time (s)');
 
 subplot(2,2,3);
-imagesc(squeeze(mean(TrightCright,1)),erdScale); ax=gca; ax.XLim = allt; ax.YLim = [1 50]; set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title(['Pain R Cue R']); colorbar;
+imagesc(squeeze(mean(TrightCright(EL,:,:),1)),erdScale); ax=gca; ax.XLim = allt; ax.YLim = [1 50]; set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title(['Pain R Cue R']); colorbar;
 hold on; line([26 26], [1 50], 'Color', 'k', 'LineWidth', 1); hold on; line([34 34],[1 50], 'Color', 'k', 'LineWidth', 1); hold off; axis xy; ax.XTick = sample_ticks; ax.XTickLabel = time_ticks; xlabel('Time (s)');
 
 subplot(2,2,2);
-imagesc(squeeze(mean(TrightCleft,1)),erdScale); ax=gca; ax.XLim = allt;ax.YLim = [1 50]; set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title(['Pain R Cue L']); colorbar;
+imagesc(squeeze(mean(TrightCleft(EL,:,:),1)),erdScale); ax=gca; ax.XLim = allt;ax.YLim = [1 50]; set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title(['Pain R Cue L']); colorbar;
 hold on; line([26 26], [1 50], 'Color', 'k', 'LineWidth', 1); hold on; line([34 34],[1 50], 'Color', 'k', 'LineWidth', 1); hold off; axis xy; ax.XTick = sample_ticks; ax.XTickLabel = time_ticks; xlabel('Time (s)');
 colormap(jet)
 
@@ -258,13 +285,15 @@ subplot(1,2,2); topoplot(mean(incong,2),E,'style','map','maplimits',erdScale); t
 %export for statistics -- removed -- see previous versions if needed
 
 % =================================================================
+% Uncomment to produce a blank map of electrode locs
 
-figure('Name','Blank Map');
-noels = zeros(1,32);
-topoplot(noels,E,'style','blank','electrodes','on');
+% figure('Name','Blank Map');
+% noels = zeros(1,32);
+% topoplot(noels,E,'style','blank','electrodes','on');
 %
 % % =================================================================
-%
+% Uncomment to look at all participant data individually
+
 % alls = squeeze(mean(squeeze(GERDall(:,:,:,:,:,:)),1));
 % alls = squeeze(mean(squeeze(alls(:,:,:,:,:,:)),4));
 % alls = squeeze(mean(squeeze(alls(:,:,:,:,:,:)),3));
