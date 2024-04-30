@@ -228,7 +228,7 @@ TleftCright = (leftrightdeval1+leftrightdeval2)./2; % incong left
 TrightCright = (rightrightdeval1+rightrightdeval2)./2; % cong right
 TrightCleft = (rightleftdeval1+rightleftdeval2)./2; %incong right
 
-figure('Name','TFR plots for tonic pain-cue site interaction, averaged over all electrodes');
+figure('Name','TFR plots for tonic pain-cue site interaction, averaged over selected electrodes');
 subplot(2,2,1);
 imagesc(squeeze(mean(TleftCleft(EL,:,:),1)),erdScale); ax=gca; ax.XLim = allt; ax.YLim = [1 50];set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title(['Pain L Cue L']); colorbar;
 hold on; line([26 26], [1 50], 'Color', 'k', 'LineWidth', 1); hold on; line([34 34], [1 50], 'Color', 'k', 'LineWidth', 1); hold off; axis xy; % adds lines at cue start and end
@@ -249,6 +249,21 @@ hold on; line([26 26], [1 50], 'Color', 'k', 'LineWidth', 1); hold on; line([34 
 colormap(jet)
 
 %%%%%%%%%%%%%%%%%%%%%%%
+
+cong = (TleftCleft+TrightCright)./2;
+incong = (TleftCright+TrightCleft)./2;
+
+figure('Name','TFR plots for tonic cong-incong, averaged over selected electrodes');
+subplot(2,2,1);
+imagesc(squeeze(mean(cong(EL,:,:),1)),erdScale); ax=gca; ax.XLim = allt; ax.YLim = [1 50];set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title(['Congruent']); colorbar;
+hold on; line([26 26], [1 50], 'Color', 'k', 'LineWidth', 1); hold on; line([34 34], [1 50], 'Color', 'k', 'LineWidth', 1); hold off; axis xy; % adds lines at cue start and end
+
+sample_ticks = ax.XLim(1):10:ax.XLim(2); time_ticks = PPStime(sample_ticks); ax.XTick = sample_ticks; ax.XTickLabel = time_ticks; xlabel('Time (s)');
+
+subplot(2,2,2);
+imagesc(squeeze(mean(incong(EL,:,:),1)),erdScale); ax=gca; ax.XLim = allt; ax.YLim = [1 50]; set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title(['Incongruent']); colorbar;
+hold on; line([26 26], [1 50], 'Color', 'k', 'LineWidth', 1); hold on; line([34 34],[1 50], 'Color', 'k', 'LineWidth', 1); hold off; axis xy; ax.XTick = sample_ticks; ax.XTickLabel = time_ticks; xlabel('Time (s)');
+colormap(jet)
 
 %% =================================================================
 
