@@ -90,6 +90,7 @@ alpha_frontal <- EEGData %>% filter(FreqBand == 8 & ElectrodeGroup == "Frontal")
 # Estimate marginal means - central
 
 current_model_ac <- lmer(EEGPowerChange~ Cue * Condition * Timebin + (1|ID/Rep), REML = FALSE, data = alpha_central)
+alpha_central$predictedvals <- predict(current_model_ac)
 emmeans(current_model_ac, list(pairwise ~ Cue), adjust = "sidak")
 emmeans(current_model_ac, pairwise~Cue | Condition) #if there was an interaction your code would be this
 emmeans(current_model_ac, pairwise~Cue | Timebin) #if there was an interaction your code would be this
@@ -103,6 +104,7 @@ emmip(current_model_ac, Condition:Cue ~ Timebin, cov.reduce = range)
 ###### Estimate marginal means - parietal
 
 current_model_ap <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = alpha_parietal)
+alpha_parietal$predictedvals <- predict(current_model_ap)
 emmeans(current_model_ap, list(pairwise ~ Cue), adjust = "none")
 emmeans(current_model_ap, list(pairwise ~ Condition), adjust = "none")
 emmeans(current_model_ap, pairwise~Cue | Timebin) #if there was an interaction your code would be this
@@ -112,6 +114,7 @@ emmeans(current_model_ap, pairwise~Cue | Timebin / Condition) #3 way
 ###### Estimate marginal means - frontal
 
 current_model_af <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = alpha_frontal)
+alpha_frontal$predictedvals <- predict(current_model_af)
 emmeans(current_model_af, list(pairwise ~ Cue), adjust = "sidak")
 emmeans(current_model_af, list(pairwise ~ Condition), adjust = "sidak")
 emmeans(current_model_af, pairwise~Cue | Timebin) #if there was an interaction your code would be this
@@ -125,6 +128,8 @@ emmeans(current_model_af, pairwise~Cue | Condition / Timebin) #3 way
   Cue = c("Neutral","Pain")
 ))
 emmip(current_model_ap, Cue ~ Timebin, at = mylist, CIs = TRUE)
+
+adjustedalphadata <- rbind(alpha_frontal, alpha_central, alpha_parietal)
 
 # ------------- Theta -------------
 
@@ -168,6 +173,11 @@ theta_occipital <- EEGData %>% filter(FreqBand == 4 & ElectrodeGroup == "Occipit
 current_model_frontal <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) + Timebin + (1|ID/Rep), REML = FALSE, data = theta_frontal)
 current_model_central <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) + Timebin + (1|ID/Rep), REML = FALSE, data = theta_central)
 current_model_occipital <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) + Timebin + (1|ID/Rep), REML = FALSE, data = theta_occipital)
+
+theta_central$predictedvals <- predict(current_model_central)
+theta_frontal$predictedvals <- predict(current_model_frontal)
+theta_occipital$predictedvals <- predict(current_model_occipital)
+
 emmeans(current_model_frontal, list(pairwise ~ Condition), adjust = "sidak")
 emmeans(current_model_frontal, list(pairwise ~ Timebin), adjust = "sidak")
 emmeans(current_model_central, list(pairwise ~ Condition), adjust = "sidak")
@@ -175,6 +185,9 @@ emmeans(current_model_occipital, list(pairwise ~ Condition), adjust = "sidak")
 emmeans(current_model_occipital, list(pairwise ~ Timebin), adjust = "sidak")
 emmeans(current_model_occipital, list(pairwise ~ Cue | Condition), adjust = "sidak")
 emmeans(current_model_occipital, list(pairwise ~ Condition | Cue), adjust = "sidak")
+
+adjustedthetadata <- rbind(theta_frontal, theta_central, theta_occipital)
+
 
 # ------------- Beta -------------
 
@@ -218,6 +231,10 @@ beta_parietal <- EEGData %>% filter(FreqBand == 16 & ElectrodeGroup == "Parietal
 current_model_parietal <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = beta_parietal)
 current_model_central <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = beta_central)
 
+beta_central$predictedvals <- predict(current_model_central)
+beta_parietal$predictedvals <- predict(current_model_parietal)
+adjustedbetadata <- rbind(beta_central, beta_parietal)
+
 emmeans(current_model_central, list(pairwise ~ Cue), adjust = "sidak")
 emmeans(current_model_central, pairwise~Cue | Condition) #if there was an interaction your code would be this
 
@@ -247,6 +264,13 @@ current_model_central <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Conditi
 emmeans(current_model_central, pairwise~Cue | Timebin / Condition) #3 way
 emmeans(current_model_central, list(pairwise ~ Cue), adjust = "sidak")
 emmeans(current_model_parietal, list(pairwise ~ Cue), adjust = "sidak")
+
+# ------------ Exporting to CSVs -------------
+#------- saving
+
+adjustedRQ1data <- rbind(adjustedalphadata, adjustedbetadata, adjustedthetadata)
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ1data_180324.csv"
+write.csv(adjustedRQ1data, file = file_path, row.names = TRUE)
 
 # ------------- RQ2 -------------
 
@@ -353,6 +377,8 @@ theta_frontal <- EEGData %>% filter(FreqBand == 4 & ElectrodeGroup == "Frontal")
 current_model_theta <- lmer(EEGPowerChange~ as.factor(TonicSide) + Timebin + (1|ID/Rep), REML = FALSE, data = theta_central)
 current_model_theta <- lmer(EEGPowerChange~ TonicSide + Timebin + (1|ID/Rep), REML = FALSE, data = theta_central)
 summary(current_model_theta)
+
+theta_central$predictedvals <- predict(current_model_theta)
 
 emmeans(current_model_theta, list(pairwise ~ TonicSide), adjust = "sidak")
 
@@ -547,6 +573,8 @@ alpha_parietal <- EEGData %>% filter(FreqBand == 8 & ElectrodeGroup == "Parietal
 current_model_alpha <- lmer(EEGPowerChange~ TonicSide + ElHem + Timebin + (1|ID/Rep), REML = FALSE, data = alpha_parietal)
 summary(current_model_alpha)
 
+alpha_parietal$predictedvals_hem <- predict(current_model_alpha)
+
 emmeans(current_model_alpha, list(pairwise ~ ElHem), adjust = "sidak")
 emmeans(current_model_alpha, list(pairwise ~ TonicSide), adjust = "sidak")
 plot(effect("TonicSide:ElHem", current_model_alpha))
@@ -617,6 +645,8 @@ beta_parietal <- EEGData %>% filter(FreqBand == 16 & ElectrodeGroup == "Parietal
 current_model_beta <- lmer(EEGPowerChange~ TonicSide * ElHem + (1|ID/Rep), REML = FALSE, data = beta_parietal)
 summary(current_model_beta)
 
+beta_parietal$predictedvals_hem <- predict(current_model_beta)
+
 emmeans(current_model_beta, list(pairwise ~ ElHem), adjust = "sidak")
 emmeans(current_model_beta, list(pairwise ~ TonicSide|ElHem), adjust = "sidak")
 emmeans(current_model_beta, list(pairwise ~ ElHem|TonicSide), adjust = "sidak")
@@ -637,6 +667,14 @@ theta_merged_coefficients <- rbind(coefficients_table2, coefficients_table5)
 theta_merged_coefficients$FDR_adjusted_pvalue <- p.adjust(theta_merged_coefficients$`Pr(>|t|)`, method = "fdr")
 
 #------- saving
+
+adjustedRQ2data <- theta_central
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2data_180324.csv"
+write.csv(adjustedRQ2data, file = file_path, row.names = TRUE)
+
+adjustedRQ2hemdata <- rbind(alpha_parietal, beta_parietal)
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2hemdata_180324.csv"
+write.csv(adjustedRQ2hemdata, file = file_path, row.names = TRUE)
 
 all_merged_coefficients <- rbind(alpha_merged_coefficients, beta_merged_coefficients, theta_merged_coefficients)
 file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_180324.csv"
@@ -739,6 +777,8 @@ alpha_parietal <- EEGData %>% filter(FreqBand == 8 & ElectrodeGroup == "Parietal
 
 #plotting effects - have to get rid of the 'asfactor' but this has already been determined above anyway
 cov_alpha_frontal1 <- lmer(EEGPowerChange~ TonicSide * MeanUn + (1|ID/Rep), REML = FALSE, data = alpha_frontal)
+alpha_frontal$predictedvals <- predict(cov_alpha_frontal1)
+
 summary(cov_alpha_frontal1)
 plot(effect("TonicSide", cov_alpha_frontal1))
 plot(effect("MeanUn", cov_alpha_frontal1))
@@ -749,12 +789,14 @@ ratinglist<- list(MeanUn = seq(1.5, 6.5, by = 1))
 emmeans(cov_alpha_frontal1, pairwise~TonicSide|MeanUn, at = ratinglist)
 
 cov_alpha_frontal2 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = alpha_frontal)
+alpha_frontal$predictedvals2 <- predict(cov_alpha_frontal2)
 summary(cov_alpha_frontal2)
 plot(effect("PupilDiameter", cov_alpha_frontal2))
 mylist<- list(PupilDiameter = seq(-1, 1, by = 0.5))
 emmeans(cov_alpha_frontal2, pairwise~PupilDiameter, at = mylist, adjust = "sidak")
 
 cov_alpha_frontal3 <- lmer(EEGPowerChange~ TonicSide * MeanInt + (1|ID/Rep), REML = FALSE, data = alpha_frontal)
+alpha_frontal$predictedvals3 <- predict(cov_alpha_frontal3)
 summary(cov_alpha_frontal3)
 ratinglist<- list(MeanInt = seq(1.5, 6.5, by = 1))
 plot(effect("MeanInt", cov_alpha_frontal3))
@@ -765,6 +807,7 @@ emmeans(cov_alpha_frontal3, pairwise~TonicSide|MeanInt, at = ratinglist)
 
 #plotting effects - have to get rid of the 'asfactor' but this has already been determined above anyway
 cov_alpha_central1 <- lmer(EEGPowerChange~ TonicSide * MeanUn + (1|ID/Rep), REML = FALSE, data = alpha_central)
+alpha_central$predictedvals1 <- predict(cov_alpha_central1)
 summary(cov_alpha_central1)
 plot(effect("TonicSide", cov_alpha_central1))
 plot(effect("MeanUn", cov_alpha_central1))
@@ -775,6 +818,7 @@ ratinglist<- list(MeanUn = seq(1.5, 6.5, by = 1))
 emmeans(cov_alpha_central1, pairwise~TonicSide|MeanUn, at = ratinglist)
 
 cov_alpha_central2 <- lmer(EEGPowerChange~ TonicSide * MeanInt + (1|ID/Rep), REML = FALSE, data = alpha_central)
+alpha_central$predictedvals2 <- predict(cov_alpha_central2)
 summary(cov_alpha_central2)
 plot(effect("MeanInt", cov_alpha_central2))
 plot(effect("TonicSide:MeanInt", cov_alpha_central2))
@@ -783,6 +827,7 @@ plot(effect("TonicSide:MeanInt", cov_alpha_central2))
 
 #plotting effects - have to get rid of the 'asfactor' but this has already been determined above anyway
 cov_alpha_parietal1 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = alpha_parietal)
+alpha_parietal$predictedvals <- predict(cov_alpha_parietal1)
 plot(effect("TonicSide", cov_alpha_parietal1))
 plot(effect("TonicSide:PupilDiameter", cov_alpha_parietal1))
 
@@ -879,10 +924,12 @@ theta_parietal <- EEGData %>% filter(FreqBand == 4 & ElectrodeGroup == "Parietal
 
 #plotting effects - have to get rid of the 'asfactor' but this has already been determined above anyway
 cov_theta_frontal <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = theta_frontal)
+theta_frontal$predictedvals <- predict(cov_theta_frontal)
 plot(effect("PupilDiameter", cov_theta_frontal))
 
 #plotting effects - have to get rid of the 'asfactor' but this has already been determined above anyway
 cov_theta_parietal <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = theta_parietal)
+theta_parietal$predictedvals <- predict(cov_theta_parietal)
 plot(effect("PupilDiameter", cov_theta_parietal))
 
 # ------------- RQ2 Covs Beta -------------
@@ -1000,6 +1047,9 @@ beta_central <- EEGData %>% filter(FreqBand == 16 & ElectrodeGroup == "Central")
 
 cov_beta_occipital <- lmer(EEGPowerChange~ TonicSide * MeanUn + (1|ID/Rep), REML = FALSE, data = beta_occipital)
 cov_beta_parietal <- lmer(EEGPowerChange~ TonicSide * MeanUn + (1|ID/Rep), REML = FALSE, data = beta_parietal)
+beta_occipital$predictedvals_unp <- predict(cov_beta_occipital)
+beta_parietal$predictedvals_unp <- predict(cov_beta_parietal)
+
 summary(cov_beta_occipital)
 summary(cov_beta_parietal)
 emmeans(cov_beta_occipital, list(pairwise ~ TonicSide), adjust = "sidak")
@@ -1007,13 +1057,20 @@ emmeans(cov_beta_parietal, list(pairwise ~ TonicSide), adjust = "sidak")
 
 cov_beta_occipital2 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = beta_occipital)
 cov_beta_parietal2 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = beta_parietal)
+beta_occipital$predictedvals_pupild <- predict(cov_beta_occipital2)
+beta_parietal$predictedvals_pupild <- predict(cov_beta_parietal2)
+
 summary(cov_beta_occipital2)
 summary(cov_beta_parietal2)
 
-cov_beta_central <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = beta_central)
-cov_beta_central <- lmer(EEGPowerChange~ TonicSide * MeanUn * ElHem + (1|ID/Rep), REML = FALSE, data = beta_central)
-cov_beta_central2 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter * ElHem + (1|ID/Rep), REML = FALSE, data = beta_central)
+cov_beta_central1 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = beta_central)
+cov_beta_central2 <- lmer(EEGPowerChange~ TonicSide * MeanUn * ElHem + (1|ID/Rep), REML = FALSE, data = beta_central)
+cov_beta_central3 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter * ElHem + (1|ID/Rep), REML = FALSE, data = beta_central)
 cov_beta_parietal <- lmer(EEGPowerChange~ TonicSide * MeanUn + (1|ID/Rep), REML = FALSE, data = beta_parietal)
+beta_central$predictedvals_pupilD <- predict(cov_beta_central1)
+beta_central$predictedvals_unp_hem <- predict(cov_beta_central2)
+beta_central$predictedvals_pupilD_hem <- predict(cov_beta_central3)
+
 summary(cov_beta_central)
 emmip(cov_beta_central, TonicSide ~ PupilDiameter, cov.reduce = range)
 emmip(cov_beta_central, TonicSide:ElHem ~ MeanUn, cov.reduce = range)
@@ -1022,7 +1079,6 @@ emmip(cov_beta_central2, TonicSide:ElHem ~ PupilDiameter, cov.reduce = range)
 summary(cov_beta_)
 
 emmeans(cov_beta_central, pairwise~TonicSide|PupilDiameter, adjust = "sidak")
-
 
 # Plotting effects
 
