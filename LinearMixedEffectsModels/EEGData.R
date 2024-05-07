@@ -777,7 +777,7 @@ alpha_parietal <- EEGData %>% filter(FreqBand == 8 & ElectrodeGroup == "Parietal
 
 #plotting effects - have to get rid of the 'asfactor' but this has already been determined above anyway
 cov_alpha_frontal1 <- lmer(EEGPowerChange~ TonicSide * MeanUn + (1|ID/Rep), REML = FALSE, data = alpha_frontal)
-alpha_frontal$predictedvals <- predict(cov_alpha_frontal1)
+alpha_frontal$predictedvals_unp <- predict(cov_alpha_frontal1)
 
 summary(cov_alpha_frontal1)
 plot(effect("TonicSide", cov_alpha_frontal1))
@@ -789,14 +789,14 @@ ratinglist<- list(MeanUn = seq(1.5, 6.5, by = 1))
 emmeans(cov_alpha_frontal1, pairwise~TonicSide|MeanUn, at = ratinglist)
 
 cov_alpha_frontal2 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = alpha_frontal)
-alpha_frontal$predictedvals2 <- predict(cov_alpha_frontal2)
+alpha_frontal$predictedvals_pupilD <- predict(cov_alpha_frontal2)
 summary(cov_alpha_frontal2)
 plot(effect("PupilDiameter", cov_alpha_frontal2))
 mylist<- list(PupilDiameter = seq(-1, 1, by = 0.5))
-emmeans(cov_alpha_frontal2, pairwise~PupilDiameter, at = mylist, adjust = "sidak")
+emmeans(cov_alpha_frontal, pairwise~PupilDiameter, at = mylist, adjust = "sidak")
 
 cov_alpha_frontal3 <- lmer(EEGPowerChange~ TonicSide * MeanInt + (1|ID/Rep), REML = FALSE, data = alpha_frontal)
-alpha_frontal$predictedvals3 <- predict(cov_alpha_frontal3)
+alpha_frontal$predictedvals_int <- predict(cov_alpha_frontal3)
 summary(cov_alpha_frontal3)
 ratinglist<- list(MeanInt = seq(1.5, 6.5, by = 1))
 plot(effect("MeanInt", cov_alpha_frontal3))
@@ -807,7 +807,7 @@ emmeans(cov_alpha_frontal3, pairwise~TonicSide|MeanInt, at = ratinglist)
 
 #plotting effects - have to get rid of the 'asfactor' but this has already been determined above anyway
 cov_alpha_central1 <- lmer(EEGPowerChange~ TonicSide * MeanUn + (1|ID/Rep), REML = FALSE, data = alpha_central)
-alpha_central$predictedvals1 <- predict(cov_alpha_central1)
+alpha_central$predictedvals_unp <- predict(cov_alpha_central1)
 summary(cov_alpha_central1)
 plot(effect("TonicSide", cov_alpha_central1))
 plot(effect("MeanUn", cov_alpha_central1))
@@ -818,18 +818,27 @@ ratinglist<- list(MeanUn = seq(1.5, 6.5, by = 1))
 emmeans(cov_alpha_central1, pairwise~TonicSide|MeanUn, at = ratinglist)
 
 cov_alpha_central2 <- lmer(EEGPowerChange~ TonicSide * MeanInt + (1|ID/Rep), REML = FALSE, data = alpha_central)
-alpha_central$predictedvals2 <- predict(cov_alpha_central2)
+alpha_central$predictedvals_int <- predict(cov_alpha_central2)
 summary(cov_alpha_central2)
 plot(effect("MeanInt", cov_alpha_central2))
 plot(effect("TonicSide:MeanInt", cov_alpha_central2))
+
+alpha_central$predictedvals_pupilD <- 'na'
+alpha_central$predictedvals_int <- 'na'
 
 #---- parietal
 
 #plotting effects - have to get rid of the 'asfactor' but this has already been determined above anyway
 cov_alpha_parietal1 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = alpha_parietal)
-alpha_parietal$predictedvals <- predict(cov_alpha_parietal1)
+alpha_parietal$predictedvals_unp <- 'na'
+alpha_parietal$predictedvals_pupilD <- predict(cov_alpha_parietal1)
 plot(effect("TonicSide", cov_alpha_parietal1))
 plot(effect("TonicSide:PupilDiameter", cov_alpha_parietal1))
+
+cov_alpha_parietal2 <- lmer(EEGPowerChange~ TonicSide * MeanInt + (1|ID/Rep), REML = FALSE, data = alpha_parietal)
+alpha_parietal$predictedvals_int <- predict(cov_alpha_parietal2)
+
+adjustedRQ2alphadata <- rbind(alpha_frontal, alpha_central, alpha_parietal)
 
 # ------------- RQ2 Covs Theta -------------
 
@@ -924,13 +933,15 @@ theta_parietal <- EEGData %>% filter(FreqBand == 4 & ElectrodeGroup == "Parietal
 
 #plotting effects - have to get rid of the 'asfactor' but this has already been determined above anyway
 cov_theta_frontal <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = theta_frontal)
-theta_frontal$predictedvals <- predict(cov_theta_frontal)
+theta_frontal$predictedvals_pupilD <- predict(cov_theta_frontal)
 plot(effect("PupilDiameter", cov_theta_frontal))
 
 #plotting effects - have to get rid of the 'asfactor' but this has already been determined above anyway
 cov_theta_parietal <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = theta_parietal)
-theta_parietal$predictedvals <- predict(cov_theta_parietal)
+theta_parietal$predictedvals_pupilD <- predict(cov_theta_parietal)
 plot(effect("PupilDiameter", cov_theta_parietal))
+
+adjustedRQ2thetadata <- rbind(theta_frontal, theta_parietal)
 
 # ------------- RQ2 Covs Beta -------------
 
@@ -1014,31 +1025,6 @@ for (covariate in covariates) {
 
 model_summaries
 
-## Now adding in elhem
-
-model_summaries <- list()
-beta_cov_coefficients_table <- data.frame()
-
-for (covariate in covariates) {
-  current_model_summaries <- list()
-  for (electrode in unique(filtered_data_beta$ElectrodeGroup)) {
-    filtered_data_electrode <- filtered_data_beta %>% filter(ElectrodeGroup == electrode)
-    formula <- paste("EEGPowerChange ~ as.factor(TonicSide) *", covariate, "* ElHem + (1 | ID/Rep)")
-    current_model <- lmer(formula, REML = FALSE, data = filtered_data_electrode)
-    current_model_summaries[[paste0("ElectrodeGroup_", electrode)]] <- summary(current_model)
-    
-    #saving to a table
-    coefficients <- as.data.frame(coef(summary(current_model)))[-1, ]
-    coefficients$ElectrodeGroup <- paste0("ElectrodeGroup_", electrode)
-    coefficients$Covariate <- covariate
-    beta_cov_coefficients_table <- rbind(beta_cov_coefficients_table, coefficients)
-  }
-  model_summaries[[covariate]] <- current_model_summaries
-}
-beta_cov_coefficients_table$Test <- "RQ2BetaModerate"
-
-model_summaries
-
 #### Getting estimated means and plotting
 
 beta_occipital <- EEGData %>% filter(FreqBand == 16 & ElectrodeGroup == "Occipital")
@@ -1057,28 +1043,24 @@ emmeans(cov_beta_parietal, list(pairwise ~ TonicSide), adjust = "sidak")
 
 cov_beta_occipital2 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = beta_occipital)
 cov_beta_parietal2 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = beta_parietal)
-beta_occipital$predictedvals_pupild <- predict(cov_beta_occipital2)
-beta_parietal$predictedvals_pupild <- predict(cov_beta_parietal2)
+beta_occipital$predictedvals_pupilD <- predict(cov_beta_occipital2)
+beta_parietal$predictedvals_pupilD <- predict(cov_beta_parietal2)
 
 summary(cov_beta_occipital2)
 summary(cov_beta_parietal2)
 
 cov_beta_central1 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = beta_central)
-cov_beta_central2 <- lmer(EEGPowerChange~ TonicSide * MeanUn * ElHem + (1|ID/Rep), REML = FALSE, data = beta_central)
-cov_beta_central3 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter * ElHem + (1|ID/Rep), REML = FALSE, data = beta_central)
+
 cov_beta_parietal <- lmer(EEGPowerChange~ TonicSide * MeanUn + (1|ID/Rep), REML = FALSE, data = beta_parietal)
 beta_central$predictedvals_pupilD <- predict(cov_beta_central1)
-beta_central$predictedvals_unp_hem <- predict(cov_beta_central2)
-beta_central$predictedvals_pupilD_hem <- predict(cov_beta_central3)
+
+emmeans(cov_beta_central, pairwise~TonicSide|PupilDiameter, adjust = "sidak")
 
 summary(cov_beta_central)
 emmip(cov_beta_central, TonicSide ~ PupilDiameter, cov.reduce = range)
-emmip(cov_beta_central, TonicSide:ElHem ~ MeanUn, cov.reduce = range)
-emmip(cov_beta_central2, TonicSide:ElHem ~ PupilDiameter, cov.reduce = range)
 
-summary(cov_beta_)
-
-emmeans(cov_beta_central, pairwise~TonicSide|PupilDiameter, adjust = "sidak")
+beta_central$predictedvals_unp <- 'na'
+adjustedRQ2betadata <- rbind(beta_central, beta_parietal, beta_occipital)
 
 # Plotting effects
 
@@ -1095,7 +1077,18 @@ emmip(cov_beta_parietal, TonicSide ~ MeanUn, cov.reduce = range)
 ratinglist<- list(MeanUn = seq(1.5, 6.5, by = 1))
 emmeans(cov_beta_parietal, pairwise~TonicSide|MeanUn, at = ratinglist)
 
-#------- saving
+# ------------- Exports -------------
+# ------- saving
+
+adjustedRQ2betadata$predictedvals_int <- 'na'
+adjustedRQ2thetadata$predictedvals_int <- 'na'
+adjustedRQ2thetadata$predictedvals_unp <- 'na'
+
+adjustedRQ2covdata <- rbind(adjustedRQ2alphadata, adjustedRQ2betadata, adjustedRQ2thetadata)
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2covdata_070524.csv"
+write.csv(adjustedRQ2data, file = file_path, row.names = TRUE)
+
+# ---- Exporting coefficient tables
 
 alpha_cov_coefficients_table$FDR_adjusted_pvalue <- p.adjust(alpha_cov_coefficients_table$`Pr(>|t|)`, method = "fdr")
 theta_cov_coefficients_table$FDR_adjusted_pvalue <- p.adjust(theta_cov_coefficients_table$`Pr(>|t|)`, method = "fdr")
@@ -1104,4 +1097,127 @@ beta_cov_coefficients_table$FDR_adjusted_pvalue <- p.adjust(beta_cov_coefficient
 all_merged_cov_coefficients <- rbind(alpha_cov_coefficients_table, theta_cov_coefficients_table, beta_cov_coefficients_table)
 file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_covs_1904.csv"
 write.csv(all_merged_cov_coefficients, file = file_path, row.names = TRUE)
+
+# ------------- RQ2 HemiCovs -------------
+
+EEGData<- read.csv("/Users/dhewitt/Data/pps/Exports/ERD/PPSERDDataLong_Grouped_noav_withratings_elhem_180324.csv")
+View(EEGData)
+attach(EEGData)
+
+EEGData <- EEGData %>% filter(Block == 2 & congruency != 0) ##1 now dropped from file
+
+EEGData$CueSide<-factor(EEGData$Side,
+                        levels = c(0,1,2),
+                        labels = c("middle", "left","right"))
+
+EEGData$TonicSide<-factor(EEGData$congruency,
+                          levels = c(1,2),
+                          labels = c("incongruent","congruent"))
+
+EEGData$ElectrodeGroup<-factor(EEGData$Grouping1,
+                               levels = c(1,3,4,5),
+                               labels = c("Frontal", "Central","Parietal","Occipital")) #averaging over both levels of pain side
+
+EEGData$ElHem<-factor(EEGData$ElHem,
+                      levels = c(1,-1),
+                      labels = c("Contra","Ipsi")) #averaging over both levels of pain side
+
+EEGData <- na.omit(EEGData)
+
+###################### separating into frequency bands
+
+filtered_data_alpha <- EEGData %>% filter(FreqBand == 8)
+filtered_data_beta <- EEGData %>% filter(FreqBand == 16)
+
+# ------------- Alpha - HemiCovs -------------
+## Now adding in the congruency condition for ones that were significant alone
+
+covariates <- c("MeanInt", "MeanUn", "PupilDiameter")
+
+model_summaries <- list()
+alpha_hemcov_coefficients_table <- data.frame()
+
+for (covariate in covariates) {
+  current_model_summaries <- list()
+  for (electrode in unique(filtered_data_alpha$ElectrodeGroup)) {
+    filtered_data_electrode <- filtered_data_alpha %>% filter(ElectrodeGroup == electrode)
+    formula <- paste("EEGPowerChange ~ as.factor(TonicSide) *", covariate, "* ElHem + (1 | ID/Rep)")
+    current_model <- lmer(formula, REML = FALSE, data = filtered_data_electrode)
+    current_model_summaries[[paste0("ElectrodeGroup_", electrode)]] <- summary(current_model)
+    
+    #saving to a table
+    coefficients <- as.data.frame(coef(summary(current_model)))[-1, ]
+    coefficients$ElectrodeGroup <- paste0("ElectrodeGroup_", electrode)
+    coefficients$Covariate <- covariate
+    alpha_hemcov_coefficients_table <- rbind(alpha_hemcov_coefficients_table, coefficients)
+  }
+  model_summaries[[covariate]] <- current_model_summaries
+}
+alpha_hemcov_coefficients_table$Test <- "RQ2HemAlphaModerate"
+
+model_summaries
+
+#### Getting estimated means and plotting
+alpha_frontal <- EEGData %>% filter(FreqBand == 8 & ElectrodeGroup == "Frontal")
+
+# interactions with hem and covs
+cov_alpha_frontal <- lmer(EEGPowerChange~ TonicSide * MeanUn * ElHem + (1|ID/Rep), REML = FALSE, data = alpha_frontal)
+alpha_frontal$ERD_unp_hem <- predict(cov_alpha_frontal)
+emmip(cov_alpha_frontal, TonicSide:ElHem ~ MeanUn, cov.reduce = range)
+
+# ------------- Beta - HemiCovs -------------
+## Now adding in the congruency condition
+
+covariates <- c("PupilDiameter", "MeanUn")
+
+model_summaries <- list()
+beta_hemcov_coefficients_table <- data.frame()
+
+for (covariate in covariates) {
+  current_model_summaries <- list()
+  for (electrode in unique(filtered_data_beta$ElectrodeGroup)) {
+    filtered_data_electrode <- filtered_data_beta %>% filter(ElectrodeGroup == electrode)
+    formula <- paste("EEGPowerChange ~ as.factor(TonicSide) *", covariate, "* ElHem + (1 | ID/Rep)")
+    current_model <- lmer(formula, REML = FALSE, data = filtered_data_electrode)
+    current_model_summaries[[paste0("ElectrodeGroup_", electrode)]] <- summary(current_model)
+    
+    #saving to a table
+    coefficients <- as.data.frame(coef(summary(current_model)))[-1, ]
+    coefficients$ElectrodeGroup <- paste0("ElectrodeGroup_", electrode)
+    coefficients$Covariate <- covariate
+    beta_hemcov_coefficients_table <- rbind(beta_hemcov_coefficients_table, coefficients)
+  }
+  model_summaries[[covariate]] <- current_model_summaries
+}
+beta_hemcov_coefficients_table$Test <- "RQ2HemBetaModerate"
+
+model_summaries
+
+#### Getting estimated means and plotting
+beta_central <- EEGData %>% filter(FreqBand == 16 & ElectrodeGroup == "Central")
+
+# interactions with hem and covs
+cov_beta_central2 <- lmer(EEGPowerChange~ TonicSide * MeanUn * ElHem + (1|ID/Rep), REML = FALSE, data = beta_central)
+cov_beta_central3 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter * ElHem + (1|ID/Rep), REML = FALSE, data = beta_central)
+beta_central$ERD_unp_hem <- predict(cov_beta_central2)
+beta_central$ERD_pupilD_hem <- predict(cov_beta_central3)
+emmip(cov_beta_central, TonicSide:ElHem ~ MeanUn, cov.reduce = range)
+emmip(cov_beta_central2, TonicSide:ElHem ~ PupilDiameter, cov.reduce = range)
+
+# ---- Exporting coefficient tables
+
+alpha_hemcov_coefficients_table$FDR_adjusted_pvalue <- p.adjust(alpha_hemcov_coefficients_table$`Pr(>|t|)`, method = "fdr")
+beta_hemcov_coefficients_table$FDR_adjusted_pvalue <- p.adjust(beta_hemcov_coefficients_table$`Pr(>|t|)`, method = "fdr")
+
+all_merged_hemcov_coefficients <- rbind(alpha_hemcov_coefficients_table, beta_hemcov_coefficients_table)
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_hemcovs_0705.csv"
+write.csv(all_merged_hemcov_coefficients, file = file_path, row.names = TRUE)
+
+# exporting csvs for figures
+alpha_frontal$ERD_pupilD_hem <- 'na'
+
+adjustedRQ2hemcovdata <- rbind(beta_central, alpha_frontal)
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2hemcovdata_070524.csv"
+write.csv(adjustedRQ2hemcovdata, file = file_path, row.names = TRUE)
+
 
