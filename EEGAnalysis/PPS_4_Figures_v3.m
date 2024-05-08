@@ -36,7 +36,7 @@ lfirst=[3,5,9,11,13,15,17,19,21,25,27,29];
 rfirst=[2,4,6,8,10,12,14,16,20,22,24,26,28,30];
 allsubs=sort([3,5,9,11,13,15,17,19,21,25,27,29,2,4,6,8,10,12,14,16,20,22,24,26,28,30]);
 
-el = frontal; %type in electrodes themselves or choose a cluster
+el = parietal; %type in electrodes themselves or choose a cluster
 
 %=====================================================================
 
