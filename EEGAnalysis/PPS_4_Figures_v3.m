@@ -17,9 +17,9 @@ eeglab_path = '/Users/dhewitt/Analysis/eeglab2023.1/'; addpath(eeglab_path);
 fieldtrip_path = '/Users/dhewitt/Analysis/fieldtrip-20240110/'; addpath(fieldtrip_path); ft_defaults;
 % %=====================================================================
 
-erdScale = [-20 20]; % scale for all maps - theta usually -30 30, alpha -20 20, beta -15 15
-freq = [4 7]; % frequency band - change to 4 7 for theta, 8 12 for alpha, 16 24 for beta
-topoTimeWindow = [0 2.8; 0.8 2.8]; % time windows for topographies. 1 sets topo for fig 1, 2 sets time window for figs 2+
+erdScale = [-15 15]; % scale for all maps - theta usually -30 30, alpha -20 20, beta -15 15
+freq = [16 24]; % frequency band - change to 4 7 for theta, 8 12 for alpha, 16 24 for beta
+topoTimeWindow = [0 2.8; 0 2.8]; % time windows for topographies. 1 sets topo for fig 1, 2 sets time window for figs 2+
 tfTimeWindow = [-2 2.8]; % time window for time frequency plots
 timewindows = [0 0.79; 0.8 1.79; 1.8 2.8];
 
@@ -36,7 +36,7 @@ lfirst=[3,5,9,11,13,15,17,19,21,25,27,29];
 rfirst=[2,4,6,8,10,12,14,16,20,22,24,26,28,30];
 allsubs=sort([3,5,9,11,13,15,17,19,21,25,27,29,2,4,6,8,10,12,14,16,20,22,24,26,28,30]);
 
-el = parietal; %type in electrodes themselves or choose a cluster
+el = central; %type in electrodes themselves or choose a cluster
 
 %=====================================================================
 
