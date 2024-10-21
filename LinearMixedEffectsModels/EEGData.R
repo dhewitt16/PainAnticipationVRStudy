@@ -269,7 +269,7 @@ emmeans(current_model_parietal, list(pairwise ~ Cue), adjust = "sidak")
 #------- saving
 
 adjustedRQ1data <- rbind(adjustedalphadata, adjustedbetadata, adjustedthetadata)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ1data_180324.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ1data_141024.csv"
 write.csv(adjustedRQ1data, file = file_path, row.names = TRUE)
 
 # ------------- RQ2 -------------
@@ -292,6 +292,9 @@ EEGData$ElectrodeGroup<-factor(EEGData$Grouping2,
                                levels = c(1,3,4,5),
                                labels = c("Frontal", "Central","Parietal","Occipital")) #averaging over both levels of pain side
 EEGData <- na.omit(EEGData)
+
+EEGData$z_score <- (EEGData$EEGPowerChange - mean(EEGData$EEGPowerChange, na.rm = TRUE)) / sd(EEGData$EEGPowerChange, na.rm = TRUE)
+EEGData <- EEGData[abs(EEGData$z_score) < 3, ]
 
 ###################### separating into frequency bands
 
@@ -637,19 +640,19 @@ theta_merged_coefficients$FDR_adjusted_pvalue <- p.adjust(theta_merged_coefficie
 #------- saving
 
 adjustedRQ2data <- theta_central
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2data_180324.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2data_141024.csv"
 write.csv(adjustedRQ2data, file = file_path, row.names = TRUE)
 
 adjustedRQ2hemdata <- rbind(alpha_parietal, beta_parietal)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2hemdata_180324.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2hemdata_141024.csv"
 write.csv(adjustedRQ2hemdata, file = file_path, row.names = TRUE)
 
 all_merged_coefficients <- rbind(alpha_merged_coefficients, beta_merged_coefficients, theta_merged_coefficients)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_180324.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_141024.csv"
 write.csv(all_merged_coefficients, file = file_path, row.names = TRUE)
 
 all_merged_hems <- rbind(coefficients_hem_1, coefficients_hem_2)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_hems.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_hems_141024.csv"
 write.csv(all_merged_hems, file = file_path, row.names = TRUE)
 
 # --------------- RQ2 - Covariates 
