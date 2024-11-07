@@ -17,7 +17,7 @@ eeglab_path = '/Users/dhewitt/Analysis/eeglab2023.1/'; addpath(eeglab_path);
 fieldtrip_path = '/Users/dhewitt/Analysis/fieldtrip-20240110/'; addpath(fieldtrip_path); ft_defaults;
 % %=====================================================================
 
-erdScale = [-15 15]; % scale for all maps - theta usually -30 30, alpha -20 20, beta -15 15
+erdScale = [-20 20]; % scale for all maps - theta usually -30 30, alpha -20 20, beta -15 15
 freq = [16 24]; % frequency band - change to 4 7 for theta, 8 12 for alpha, 16 24 for beta
 topoTimeWindow = [0 2.8; 0 2.8]; % time windows for topographies. 1 sets topo for fig 1, 2 sets time window for figs 2+
 tfTimeWindow = [-2 2.8]; % time window for time frequency plots
@@ -36,7 +36,7 @@ lfirst=[3,5,9,11,13,15,17,19,21,25,27,29];
 rfirst=[2,4,6,8,10,12,14,16,20,22,24,26,28,30];
 allsubs=sort([3,5,9,11,13,15,17,19,21,25,27,29,2,4,6,8,10,12,14,16,20,22,24,26,28,30]);
 
-el = central; %type in electrodes themselves or choose a cluster
+el = frontal; %type in electrodes themselves or choose a cluster
 
 %=====================================================================
 
@@ -252,6 +252,7 @@ colormap(jet)
 
 cong = (TleftCleft+TrightCright)./2;
 incong = (TleftCright+TrightCleft)./2;
+congminusincong = cong-incong;
 
 figure('Name','TFR plots for tonic cong-incong, averaged over selected electrodes');
 subplot(2,2,1);
@@ -262,6 +263,11 @@ sample_ticks = ax.XLim(1):10:ax.XLim(2); time_ticks = PPStime(sample_ticks); ax.
 
 subplot(2,2,2);
 imagesc(squeeze(mean(incong(EL,:,:),1)),erdScale); ax=gca; ax.XLim = allt; ax.YLim = [1 50]; set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title(['Incongruent']); colorbar;
+hold on; line([26 26], [1 50], 'Color', 'k', 'LineWidth', 1); hold on; line([34 34],[1 50], 'Color', 'k', 'LineWidth', 1); hold off; axis xy; ax.XTick = sample_ticks; ax.XTickLabel = time_ticks; xlabel('Time (s)');
+colormap(jet) %old eeglab standard
+
+subplot(2,2,3);
+imagesc(squeeze(mean(congminusincong(EL,:,:),1)),erdScale); ax=gca; ax.XLim = allt; ax.YLim = [1 50]; set(gca,'XLim',ax.XLim,'YLim',ax.YLim); title(['Cong-Incong']); colorbar;
 hold on; line([26 26], [1 50], 'Color', 'k', 'LineWidth', 1); hold on; line([34 34],[1 50], 'Color', 'k', 'LineWidth', 1); hold off; axis xy; ax.XTick = sample_ticks; ax.XTickLabel = time_ticks; xlabel('Time (s)');
 colormap(jet)
 
