@@ -56,6 +56,10 @@ sink()
 coefficients_table_RQ1 <- as.data.frame(summary(diameter_pred_phase)$coefficients[-1, ])  # Exclude the intercept
 coefficients_table_RQ1$Test <- "RQ1"
 
+Pupildata$predictedvals <- predict(diameter_pred_phase)
+file_path <- "/Users/dhewitt/Data/pps/Exports/GazeObject/adjustedRQ1covdata_191124.csv"
+write.csv(Pupildata, file = file_path, row.names = TRUE)
+
 ###################### RQ2
 
 Pupildata<- read.csv("/Users/dhewitt/Data/pps/Exports/GazeObject/GrandAvExport_GazeObjExtLong_Recoded_noav_1904.csv") 
