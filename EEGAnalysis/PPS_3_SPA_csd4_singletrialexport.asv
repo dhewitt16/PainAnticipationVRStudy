@@ -1,4 +1,4 @@
-%% PPS -- Step 3 -- Spectral analysis %
+ %% PPS -- Step 3 -- Spectral analysis %
 
 % This program will compute the power spectral densities of EEG in 1-sec
 % intervals. Power spectra are computed in sliding manner with 0.9 s overlap.

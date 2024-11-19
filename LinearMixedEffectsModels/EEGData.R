@@ -37,6 +37,9 @@ EEGData$ElectrodeGroup<-factor(EEGData$Grouping2,
                                labels = c("Frontal", "Central","Parietal","Occipital")) #averaging over both levels of pain side
 EEGData <- na.omit(EEGData)
 
+EEGData$z_score <- (EEGData$EEGPowerChange - mean(EEGData$EEGPowerChange, na.rm = TRUE)) / sd(EEGData$EEGPowerChange, na.rm = TRUE)
+EEGData <- EEGData[abs(EEGData$z_score) < 3, ]
+
 ###################### firstly looking at RQ1 - cues vs. condition
 # separating into frequency bands
 
@@ -46,20 +49,19 @@ filtered_data_beta <- EEGData %>% filter(FreqBand == 16 )
 
 # ------------- Alpha -------------
 
+# Model comparison
+current_model <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) + (1|ID/Rep), REML = FALSE, data = filtered_data_alpha)
+current_model_timebin <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_alpha)
+current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_alpha)
+AIC(current_model, current_model_timebin, current_model_timebin_int)
+BIC(current_model, current_model_timebin, current_model_timebin_int)
+
 electrodes <- unique(filtered_data_alpha$ElectrodeGroup)
 model_summaries <- list()
 
 for (electrode in electrodes) {
   filtered_data_electrode <- filtered_data_alpha %>% filter(ElectrodeGroup == electrode)
-  
-  # Fit model without Timebin
-  current_model <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_NoTimebin")]] <- summary(current_model)
-  
-  # Fit model with Timebin
-  current_model_timebin <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinOnly")]] <- summary(current_model_timebin)
-  
+
   # Fit model with Timebin and interaction
   current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
   model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinInteraction")]] <- summary(current_model_timebin_int)
@@ -79,10 +81,6 @@ for (key in names(model_summaries)) {
 coefficients_table1$Test <- "RQ1AlphaComplex"
 
 # ----- Taking central and parietal regions due to significance in interaction model
-alpha_central <- EEGData %>% filter(FreqBand == 8 & ElectrodeGroup == "Central" & Timebin != 1)
-alpha_parietal <- EEGData %>% filter(FreqBand == 8 & ElectrodeGroup == "Parietal" & Timebin != 1)
-alpha_occipital <- EEGData %>% filter(FreqBand == 8 & ElectrodeGroup == "Occipital" & Timebin != 1)
-
 alpha_central <- EEGData %>% filter(FreqBand == 8 & ElectrodeGroup == "Central")
 alpha_parietal <- EEGData %>% filter(FreqBand == 8 & ElectrodeGroup == "Parietal")
 alpha_frontal <- EEGData %>% filter(FreqBand == 8 & ElectrodeGroup == "Frontal")
@@ -91,10 +89,14 @@ alpha_frontal <- EEGData %>% filter(FreqBand == 8 & ElectrodeGroup == "Frontal")
 
 current_model_ac <- lmer(EEGPowerChange~ Cue * Condition * Timebin + (1|ID/Rep), REML = FALSE, data = alpha_central)
 alpha_central$predictedvals <- predict(current_model_ac)
+current_model_ap <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = alpha_parietal)
+alpha_parietal$predictedvals <- predict(current_model_ap)
+current_model_af <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = alpha_frontal)
+alpha_frontal$predictedvals <- predict(current_model_af)
+adjustedalphadata <- rbind(alpha_frontal, alpha_central, alpha_parietal)
+
 emmeans(current_model_ac, list(pairwise ~ Cue), adjust = "sidak")
 emmeans(current_model_ac, pairwise~Cue | Condition) #if there was an interaction your code would be this
-emmeans(current_model_ac, pairwise~Cue | Timebin) #if there was an interaction your code would be this
-emmeans(current_model_ac, pairwise~Cue | Timebin / Condition) #3 way
 
 mylist<- list(Timebin = seq(1, 3, by = 1))
 emmeans(current_model_ac, pairwise~Cue | Timebin / Condition, at = mylist)
@@ -102,19 +104,15 @@ emmeans(current_model_ac, pairwise~Cue | Timebin, at = mylist, adjust = "sidak")
 emmip(current_model_ac, Condition:Cue ~ Timebin, cov.reduce = range)
 
 ###### Estimate marginal means - parietal
-
-current_model_ap <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = alpha_parietal)
-alpha_parietal$predictedvals <- predict(current_model_ap)
-emmeans(current_model_ap, list(pairwise ~ Cue), adjust = "none")
-emmeans(current_model_ap, list(pairwise ~ Condition), adjust = "none")
-emmeans(current_model_ap, pairwise~Cue | Timebin) #if there was an interaction your code would be this
+emmeans(current_model_ap, list(pairwise ~ Cue), adjust = "sidak")
+emmeans(current_model_ap, list(pairwise ~ Condition), adjust = "sidak")
+emmeans(current_model_ap, pairwise ~ Timebin, at = mylist, adjust = "sidak")
+emmeans(current_model_ap, pairwise~Cue | Timebin, at = mylist)
 emmeans(current_model_ap, pairwise~Cue | Condition) #if there was an interaction your code would be this
 emmeans(current_model_ap, pairwise~Cue | Timebin / Condition) #3 way
 
 ###### Estimate marginal means - frontal
 
-current_model_af <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = alpha_frontal)
-alpha_frontal$predictedvals <- predict(current_model_af)
 emmeans(current_model_af, list(pairwise ~ Cue), adjust = "sidak")
 emmeans(current_model_af, list(pairwise ~ Condition), adjust = "sidak")
 emmeans(current_model_af, pairwise~Cue | Timebin) #if there was an interaction your code would be this
@@ -129,9 +127,12 @@ emmeans(current_model_af, pairwise~Cue | Condition / Timebin) #3 way
 ))
 emmip(current_model_ap, Cue ~ Timebin, at = mylist, CIs = TRUE)
 
-adjustedalphadata <- rbind(alpha_frontal, alpha_central, alpha_parietal)
-
 # ------------- Theta -------------
+current_model <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) + (1|ID/Rep), REML = FALSE, data = filtered_data_theta)
+current_model_timebin <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_theta)
+current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_theta)
+AIC(current_model, current_model_timebin, current_model_timebin_int)
+BIC(current_model, current_model_timebin, current_model_timebin_int)
 
 electrodes <- unique(filtered_data_theta$ElectrodeGroup)
 model_summaries <- list()
@@ -139,15 +140,7 @@ model_summaries <- list()
 for (electrode in electrodes) {
   filtered_data_electrode <- filtered_data_theta %>% filter(ElectrodeGroup == electrode)
   
-  # Fit model without Timebin
-  current_model <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_NoTimebin")]] <- summary(current_model)
-  
-  # Fit model with Timebin
-  current_model_timebin <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinOnly")]] <- summary(current_model_timebin)
-  
-  # Fit model with Timebin and interaction
+   # Fit model with Timebin and interaction
   current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
   model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinInteraction")]] <- summary(current_model_timebin_int)
 }
@@ -157,7 +150,7 @@ model_summaries #for all
 # Create an empty data frame to store coefficients (except the intercept) for multiple comparison correction
 coefficients_table2 <- data.frame()
 for (key in names(model_summaries)) {
-  if (grepl("_WithTimebinOnly", key)) {
+  if (grepl("_WithTimebinInteraction", key)) {
     model_coefficients <- as.data.frame(model_summaries[[key]]$coefficients[-1, ])
     model_coefficients$model <- key
     coefficients_table2 <- rbind(coefficients_table2, model_coefficients)
@@ -169,27 +162,28 @@ coefficients_table2$Test <- "RQ1ThetaComplex"
 
 theta_central <- EEGData %>% filter(FreqBand == 4 & ElectrodeGroup == "Central")
 theta_frontal <- EEGData %>% filter(FreqBand == 4 & ElectrodeGroup == "Frontal")
-theta_occipital <- EEGData %>% filter(FreqBand == 4 & ElectrodeGroup == "Occipital")
-current_model_frontal <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) + Timebin + (1|ID/Rep), REML = FALSE, data = theta_frontal)
-current_model_central <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) + Timebin + (1|ID/Rep), REML = FALSE, data = theta_central)
-current_model_occipital <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) + Timebin + (1|ID/Rep), REML = FALSE, data = theta_occipital)
+theta_parietal <- EEGData %>% filter(FreqBand == 4 & ElectrodeGroup == "Parietal")
+current_model_frontal <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = theta_frontal)
+current_model_central <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = theta_central)
+current_model_parietal <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = theta_parietal)
 
 theta_central$predictedvals <- predict(current_model_central)
 theta_frontal$predictedvals <- predict(current_model_frontal)
-theta_occipital$predictedvals <- predict(current_model_occipital)
+theta_parietal$predictedvals <- predict(current_model_parietal)
+adjustedthetadata <- rbind(theta_frontal, theta_central, theta_parietal)
 
 emmeans(current_model_frontal, list(pairwise ~ Condition), adjust = "sidak")
-emmeans(current_model_frontal, list(pairwise ~ Timebin), adjust = "sidak")
 emmeans(current_model_central, list(pairwise ~ Condition), adjust = "sidak")
-emmeans(current_model_occipital, list(pairwise ~ Condition), adjust = "sidak")
-emmeans(current_model_occipital, list(pairwise ~ Timebin), adjust = "sidak")
-emmeans(current_model_occipital, list(pairwise ~ Cue | Condition), adjust = "sidak")
-emmeans(current_model_occipital, list(pairwise ~ Condition | Cue), adjust = "sidak")
-
-adjustedthetadata <- rbind(theta_frontal, theta_central, theta_occipital)
-
+emmeans(current_model_parietal, list(pairwise ~ Condition), adjust = "sidak")
+emmeans(current_model_parietal, pairwise ~ Condition | Timebin, at = mylist, adjust = "sidak")
+emmeans(current_model_central, pairwise ~ Condition | Timebin, at = mylist, adjust = "sidak")
 
 # ------------- Beta -------------
+current_model <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) + (1|ID/Rep), REML = FALSE, data = filtered_data_beta)
+current_model_timebin <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_beta)
+current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_beta)
+AIC(current_model, current_model_timebin, current_model_timebin_int)
+BIC(current_model, current_model_timebin, current_model_timebin_int)
 
 # Fit models for beta data
 electrodes <- unique(filtered_data_beta$ElectrodeGroup)
@@ -197,14 +191,6 @@ model_summaries <- list()
 
 for (electrode in electrodes) {
   filtered_data_electrode <- filtered_data_beta %>% filter(ElectrodeGroup == electrode)
-  
-  # Fit model without Timebin
-  current_model <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_NoTimebin")]] <- summary(current_model)
-  
-  # Fit model with Timebin
-  current_model_timebin <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinOnly")]] <- summary(current_model_timebin)
   
   # Fit model with Timebin and interaction
   current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
@@ -235,7 +221,6 @@ beta_central$predictedvals <- predict(current_model_central)
 beta_parietal$predictedvals <- predict(current_model_parietal)
 adjustedbetadata <- rbind(beta_central, beta_parietal)
 
-emmeans(current_model_central, list(pairwise ~ Cue), adjust = "sidak")
 emmeans(current_model_central, pairwise~Cue | Condition) #if there was an interaction your code would be this
 
 emmeans(current_model_parietal, list(pairwise ~ Cue), adjust = "sidak")
@@ -243,6 +228,8 @@ emmeans(current_model_parietal, list(pairwise ~ Condition), adjust = "sidak")
 emmeans(current_model_parietal, pairwise~Cue | Condition) #if there was an interaction your code would be this
 
 emmeans(current_model_parietal, pairwise~Cue | Timebin, at = mylist, adjust = "sidak")
+emmeans(current_model_central, pairwise~Cue | Timebin, at = mylist, adjust = "sidak")
+
 emmip(current_model_central, Condition:Cue ~ Timebin, cov.reduce = range)
 emmip(current_model_parietal, Cue ~ Timebin, cov.reduce = range)
 
@@ -250,15 +237,11 @@ emmeans(current_model_central, pairwise~Cue | Timebin, at = mylist, adjust = "si
 emmeans(current_model_central, pairwise~Cue | Condition / Timebin, at = mylist, adjust = "sidak")
 
 ### splitting up the timebin effect to interpret diffs here
-beta_central <- EEGData %>% filter(FreqBand == 16 & ElectrodeGroup == "Central" & Timebin != 1)
-beta_parietal <- EEGData %>% filter(FreqBand == 16 & ElectrodeGroup == "Parietal" & Timebin != 1)
 emmeans(current_model_central, list(pairwise ~ Timebin), adjust = "sidak")
 emmeans(current_model_central, pairwise~Cue | Timebin) #if there was an interaction your code would be this
 emmeans(current_model_central, pairwise~Cue | Timebin / Condition) #3 way
 emmeans(current_model_parietal, pairwise~Cue | Timebin) #if there was an interaction your code would be this
 
-beta_central <- EEGData %>% filter(FreqBand == 16 & ElectrodeGroup == "Central" & Timebin != 3)
-beta_parietal <- EEGData %>% filter(FreqBand == 16 & ElectrodeGroup == "Parietal" & Timebin != 3)
 current_model_parietal <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = beta_parietal)
 current_model_central <- lmer(EEGPowerChange~ as.factor(Cue) * as.factor(Condition) * Timebin + (1|ID/Rep), REML = FALSE, data = beta_central)
 emmeans(current_model_central, pairwise~Cue | Timebin / Condition) #3 way
@@ -269,7 +252,7 @@ emmeans(current_model_parietal, list(pairwise ~ Cue), adjust = "sidak")
 #------- saving
 
 adjustedRQ1data <- rbind(adjustedalphadata, adjustedbetadata, adjustedthetadata)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ1data_141024.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ1data_171024.csv"
 write.csv(adjustedRQ1data, file = file_path, row.names = TRUE)
 
 # ------------- RQ2 -------------
@@ -303,6 +286,12 @@ filtered_data_alpha <- EEGData %>% filter(FreqBand == 8)
 filtered_data_beta <- EEGData %>% filter(FreqBand == 16)
 
 # ------------- Alpha - RQ2 -------------
+#Model comparison
+current_model <- lmer(EEGPowerChange ~ as.factor(TonicSide) + (1|ID/Rep), REML = FALSE, data = filtered_data_alpha)
+current_model_timebin <- lmer(EEGPowerChange ~ as.factor(TonicSide) + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_alpha)
+current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(TonicSide) * Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_alpha)
+AIC(current_model, current_model_timebin, current_model_timebin_int)
+BIC(current_model, current_model_timebin, current_model_timebin_int)
 
 # Fit models for alpha data with different LME model
 electrodes <- unique(filtered_data_alpha$ElectrodeGroup)
@@ -310,18 +299,11 @@ model_summaries <- list()
 
 for (electrode in electrodes) {
   filtered_data_electrode <- filtered_data_alpha %>% filter(ElectrodeGroup == electrode)
-  
-  # Fit model without Timebin
-  current_model <- lmer(EEGPowerChange ~ as.factor(TonicSide) + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_NoTimebin")]] <- summary(current_model)
-  
+
   # Fit model with Timebin
   current_model_timebin <- lmer(EEGPowerChange ~ as.factor(TonicSide) + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
   model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinOnly")]] <- summary(current_model_timebin)
   
-  # Fit model with Timebin and interaction
-  current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(TonicSide) * Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinInteraction")]] <- summary(current_model_timebin_int)
 }
 
 model_summaries #for all
@@ -338,6 +320,12 @@ for (key in names(model_summaries)) {
 coefficients_table4$Test <- "RQ2AlphaModerate"
 
 # ------------- Theta - RQ2 -------------
+#Model comparison
+current_model <- lmer(EEGPowerChange ~ as.factor(TonicSide) + (1|ID/Rep), REML = FALSE, data = filtered_data_theta)
+current_model_timebin <- lmer(EEGPowerChange ~ as.factor(TonicSide) + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_theta)
+current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(TonicSide) * Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_theta)
+AIC(current_model, current_model_timebin, current_model_timebin_int)
+BIC(current_model, current_model_timebin, current_model_timebin_int)
 
 # Fit models for theta data
 electrodes <- unique(filtered_data_theta$ElectrodeGroup)
@@ -346,17 +334,10 @@ model_summaries <- list()
 for (electrode in electrodes) {
   filtered_data_electrode <- filtered_data_theta %>% filter(ElectrodeGroup == electrode)
   
-  # Fit model without Timebin
-  current_model <- lmer(EEGPowerChange ~ as.factor(TonicSide) + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_NoTimebin")]] <- summary(current_model)
-  
   # Fit model with Timebin
   current_model_timebin <- lmer(EEGPowerChange ~ as.factor(TonicSide) + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
   model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinOnly")]] <- summary(current_model_timebin)
-  
-  # Fit model with Timebin and interaction
-  current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(TonicSide) * Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinInteraction")]] <- summary(current_model_timebin_int)
+
 }
 
 model_summaries #for all
@@ -374,18 +355,21 @@ coefficients_table5$Test <- "RQ2ThetaModerate"
 
 #### central
 
-theta_central <- EEGData %>% filter(FreqBand == 4 & ElectrodeGroup == "Central")
 theta_frontal <- EEGData %>% filter(FreqBand == 4 & ElectrodeGroup == "Frontal")
-
-current_model_theta <- lmer(EEGPowerChange~ as.factor(TonicSide) + Timebin + (1|ID/Rep), REML = FALSE, data = theta_central)
-current_model_theta <- lmer(EEGPowerChange~ TonicSide + Timebin + (1|ID/Rep), REML = FALSE, data = theta_central)
+current_model_theta <- lmer(EEGPowerChange~ TonicSide + Timebin + (1|ID/Rep), REML = FALSE, data = theta_frontal)
 summary(current_model_theta)
 
-theta_central$predictedvals <- predict(current_model_theta)
+theta_frontal$predictedvals <- predict(current_model_theta)
 
 emmeans(current_model_theta, list(pairwise ~ TonicSide), adjust = "sidak")
 
 # ------------- Beta - RQ2 -------------
+#Model comparison
+current_model <- lmer(EEGPowerChange ~ as.factor(TonicSide) + (1|ID/Rep), REML = FALSE, data = filtered_data_beta)
+current_model_timebin <- lmer(EEGPowerChange ~ as.factor(TonicSide) + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_beta)
+current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(TonicSide) * Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_beta)
+AIC(current_model, current_model_timebin, current_model_timebin_int)
+BIC(current_model, current_model_timebin, current_model_timebin_int)
 
 # Fit models for beta data
 electrodes <- unique(filtered_data_beta$ElectrodeGroup)
@@ -393,18 +377,10 @@ model_summaries <- list()
 
 for (electrode in electrodes) {
   filtered_data_electrode <- filtered_data_beta %>% filter(ElectrodeGroup == electrode)
-  
-  # Fit model without Timebin
-  current_model <- lmer(EEGPowerChange ~ as.factor(TonicSide) + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_NoTimebin")]] <- summary(current_model)
-  
+ 
   # Fit model with Timebin
   current_model_timebin <- lmer(EEGPowerChange ~ as.factor(TonicSide) + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
   model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinOnly")]] <- summary(current_model_timebin)
-  
-  # Fit model with Timebin and interaction
-  current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(TonicSide) * Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinInteraction")]] <- summary(current_model_timebin_int)
 }
 
 model_summaries #for all
@@ -412,39 +388,26 @@ model_summaries #for all
 # Create an empty data frame to store coefficients (except the intercept) for multiple comparison correction
 coefficients_table6 <- data.frame()
 for (key in names(model_summaries)) {
-  if (grepl("_NoTimebin", key)) {
+  if (grepl("_WithTimebinOnly", key)) {
     model_coefficients <- as.data.frame(model_summaries[[key]]$coefficients)
     model_coefficients <- model_coefficients[-1, ]
     model_coefficients$model <- key
     coefficients_table6 <- rbind(coefficients_table6, model_coefficients)
   }
 }
-coefficients_table6$Test <- "RQ2BetaSimple"
+coefficients_table6$Test <- "RQ2BetaModerate"
 
+# ------------ Exporting to CSVs -------------
+# Doing multiple comparison corrections --- make sure to have run the most recent model for each first.
 
-# --- BETA
+alpha_merged_coefficients <- rbind(coefficients_table1) ## add alpha coef table 4 if anything sig
+alpha_merged_coefficients$FDR_adjusted_pvalue <- p.adjust(alpha_merged_coefficients$`Pr(>|t|)`, method = "fdr")
 
-filtered_data_beta <- EEGData %>% filter(FreqBand == 16 & Timebin != 1)
-# Fit models for beta data
-electrodes <- unique(filtered_data_beta$ElectrodeGroup)
-model_summaries <- list()
+beta_merged_coefficients <- rbind(coefficients_table3) ## add beta coef table 6 if anything sig
+beta_merged_coefficients$FDR_adjusted_pvalue <- p.adjust(beta_merged_coefficients$`Pr(>|t|)`, method = "fdr")
 
-for (electrode in electrodes) {
-  filtered_data_electrode <- filtered_data_beta %>% filter(ElectrodeGroup == electrode)
-  
-  # Fit model without Timebin
-  current_model <- lmer(EEGPowerChange ~ as.factor(TonicSide) + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_NoTimebin")]] <- summary(current_model)
-  
-  # Fit model with Timebin
-  current_model_timebin <- lmer(EEGPowerChange ~ as.factor(TonicSide) + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinOnly")]] <- summary(current_model_timebin)
-  
-  # Fit model with Timebin and interaction
-  current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(TonicSide) * Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinInteraction")]] <- summary(current_model_timebin_int)
-}
-model_summaries #for all
+theta_merged_coefficients <- rbind(coefficients_table2, coefficients_table5)
+theta_merged_coefficients$FDR_adjusted_pvalue <- p.adjust(theta_merged_coefficients$`Pr(>|t|)`, method = "fdr")
 
 # ------------ Looking at hemispheric asymmetries
 
@@ -467,10 +430,13 @@ EEGData$ElectrodeGroup<-factor(EEGData$Grouping1,
                                labels = c("Frontal", "Central","Parietal","Occipital")) #averaging over both levels of pain side
 
 EEGData$ElHem<-factor(EEGData$ElHem,
-                               levels = c(1,-1),
-                               labels = c("Contra","Ipsi")) #averaging over both levels of pain side
+                      levels = c(1,-1),
+                      labels = c("Contra","Ipsi")) #averaging over both levels of pain side
 
 EEGData <- na.omit(EEGData)
+
+EEGData$z_score <- (EEGData$EEGPowerChange - mean(EEGData$EEGPowerChange, na.rm = TRUE)) / sd(EEGData$EEGPowerChange, na.rm = TRUE)
+EEGData <- EEGData[abs(EEGData$z_score) < 3, ]
 
 ###################### separating into frequency bands
 
@@ -479,151 +445,25 @@ filtered_data_alpha <- EEGData %>% filter(FreqBand == 8)
 filtered_data_beta <- EEGData %>% filter(FreqBand == 16)
 
 # ------------- Alpha - RQ2 Hemi -------------
-
-# Fit models for alpha data with different LME model ---- with Hemisphere
-electrodes <- unique(filtered_data_alpha$ElectrodeGroup)
-model_summaries <- list()
-
-for (electrode in electrodes) {
-  filtered_data_electrode <- filtered_data_alpha %>% filter(ElectrodeGroup == electrode)
-  
-  # Fit model without Timebin
-  current_model <- lmer(EEGPowerChange ~ as.factor(TonicSide) + ElHem + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_ElHemOnly")]] <- summary(current_model)
-  
-  # Fit model without Timebin but Electrode Hemisphere Interaction
-  current_model <- lmer(EEGPowerChange ~ as.factor(TonicSide) * ElHem + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_NoTimebinElHemInt")]] <- summary(current_model)
-  
-  # Fit model with Timebin
-  current_model_timebin <- lmer(EEGPowerChange ~ as.factor(TonicSide) + ElHem  + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinOnly")]] <- summary(current_model_timebin)
-  
-  # Fit model with Timebin and interaction
-  current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(TonicSide) * Timebin + ElHem  + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinInteraction")]] <- summary(current_model_timebin_int)
-  
-  # Fit model without Timebin
-  current_model_int <- lmer(EEGPowerChange ~ as.factor(TonicSide) * ElHem * Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_TimebinElHemInt")]] <- summary(current_model_int)
-  
-}
-
-model_summaries #for all
-
-# Now saving -- Create an empty data frame to store coefficients (except the intercept) for multiple comparison correction
-coefficients_hem_1 <- data.frame()
-for (key in names(model_summaries)) {
-  if (grepl("_NoTimebinElHemInt", key)) {
-    model_coefficients <- as.data.frame(model_summaries[[key]]$coefficients[-1,])
-    model_coefficients$model <- key
-    coefficients_hem_1 <- rbind(coefficients_hem_1, model_coefficients)
-  }
-}
-coefficients_hem_1$Test <- "RQ2AlphaModerate"
-coefficients_hem_1$FDR_adjusted_pvalue <- p.adjust(coefficients_hem_1$`Pr(>|t|)`, method = "fdr")
-
-#---emmeans
-
-alpha_parietal <- EEGData %>% filter(FreqBand == 8 & ElectrodeGroup == "Parietal")
-
-current_model_alpha <- lmer(EEGPowerChange~ TonicSide + ElHem + Timebin + (1|ID/Rep), REML = FALSE, data = alpha_parietal)
-summary(current_model_alpha)
-
-alpha_parietal$predictedvals_hem <- predict(current_model_alpha)
-
-emmeans(current_model_alpha, list(pairwise ~ ElHem), adjust = "sidak")
-emmeans(current_model_alpha, list(pairwise ~ TonicSide), adjust = "sidak")
-plot(effect("TonicSide:ElHem", current_model_alpha))
-emmip(current_model_alpha, TonicSide ~ ElHem, CIs = TRUE)
+#Model comparison - better fit without hemisphere
+current_model_timebin <- lmer(EEGPowerChange ~ as.factor(TonicSide) + Timebin + ElHem + (1|ID/Rep), REML = FALSE, data = filtered_data_alpha)
+current_model_timebin_hem <- lmer(EEGPowerChange ~ as.factor(TonicSide) + Timebin * ElHem + (1|ID/Rep), REML = FALSE, data = filtered_data_alpha)
+AIC(current_model_timebin, current_model_timebin_hem)
+BIC(current_model_timebin, current_model_timebin_hem)
 
 # ------------- Theta - RQ2 Hemi -------------
-
-# Fit models for theta data --- with hemisphere
-electrodes <- unique(filtered_data_theta$ElectrodeGroup)
-model_summaries <- list()
-
-for (electrode in electrodes) {
-  filtered_data_electrode <- filtered_data_theta %>% filter(ElectrodeGroup == electrode)
-  
-  # Fit model without Timebin
-  current_model <- lmer(EEGPowerChange ~ as.factor(TonicSide) + ElHem + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_NoTimebin")]] <- summary(current_model)
-  
-  # Fit model without Timebin
-  current_model <- lmer(EEGPowerChange ~ as.factor(TonicSide) * ElHem + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_NoTimebinWithHemInt")]] <- summary(current_model)
-  
-  # Fit model with Timebin
-  current_model_timebin <- lmer(EEGPowerChange ~ as.factor(TonicSide) + ElHem + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinOnly")]] <- summary(current_model_timebin)
-  
-  # Fit model with Timebin
-  current_model_timebin <- lmer(EEGPowerChange ~ as.factor(TonicSide) * ElHem + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinOnlyandHemInt")]] <- summary(current_model_timebin)
-  
-  # Fit model with Timebin and interaction
-  current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(TonicSide) * Timebin + ElHem + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinInteraction")]] <- summary(current_model_timebin_int)
-}
-
-model_summaries #for all
+#Model comparison - better fit without hemisphere
+current_model_timebin <- lmer(EEGPowerChange ~ as.factor(TonicSide) + Timebin + ElHem + (1|ID/Rep), REML = FALSE, data = filtered_data_theta)
+current_model_timebin_hem <- lmer(EEGPowerChange ~ as.factor(TonicSide) + Timebin * ElHem + (1|ID/Rep), REML = FALSE, data = filtered_data_theta)
+AIC(current_model_timebin, current_model_timebin_hem)
+BIC(current_model_timebin, current_model_timebin_hem)
 
 # ------------- Beta - RQ2 Hemi -------------
-
-# Fit models for beta data --- with hemisphere
-electrodes <- unique(filtered_data_beta$ElectrodeGroup)
-model_summaries <- list()
-
-for (electrode in electrodes) {
-  filtered_data_electrode <- filtered_data_beta %>% filter(ElectrodeGroup == electrode)
-  
-  # Fit model without Timebin
-  current_model <- lmer(EEGPowerChange ~ as.factor(TonicSide) + ElHem + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_NoTimebin")]] <- summary(current_model)
-  
-  # Fit model without Timebin
-  current_model <- lmer(EEGPowerChange ~ as.factor(TonicSide) * ElHem + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_NoTimebinElHemInt")]] <- summary(current_model)
-  
-  # Fit model with Timebin
-  current_model_timebin <- lmer(EEGPowerChange ~ as.factor(TonicSide) + ElHem + Timebin + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinOnly")]] <- summary(current_model_timebin)
-  
-  # Fit model with Timebin and interaction
-  current_model_timebin_int <- lmer(EEGPowerChange ~ as.factor(TonicSide) * Timebin + ElHem + (1|ID/Rep), REML = FALSE, data = filtered_data_electrode)
-  model_summaries[[paste0("ElectrodeGroup_", electrode, "_WithTimebinInteraction")]] <- summary(current_model_timebin_int)
-}
-
-model_summaries #for all
-
-# Now saving -- Create an empty data frame to store coefficients (except the intercept) for multiple comparison correction
-coefficients_hem_2 <- data.frame()
-for (key in names(model_summaries)) {
-  if (grepl("_NoTimebinElHemInt", key)) {
-    model_coefficients <- as.data.frame(model_summaries[[key]]$coefficients[-1,])
-    model_coefficients$model <- key
-    coefficients_hem_2 <- rbind(coefficients_hem_2, model_coefficients)
-  }
-}
-coefficients_hem_2$Test <- "RQ2Beta_NoTimebin"
-coefficients_hem_2$FDR_adjusted_pvalue <- p.adjust(coefficients_hem_2$`Pr(>|t|)`, method = "fdr")
-
-#--- emmeans
-
-beta_parietal <- EEGData %>% filter(FreqBand == 16 & ElectrodeGroup == "Parietal")
-
-current_model_beta <- lmer(EEGPowerChange~ TonicSide * ElHem + (1|ID/Rep), REML = FALSE, data = beta_parietal)
-summary(current_model_beta)
-
-beta_parietal$predictedvals_hem <- predict(current_model_beta)
-
-emmeans(current_model_beta, list(pairwise ~ ElHem), adjust = "sidak")
-emmeans(current_model_beta, list(pairwise ~ TonicSide|ElHem), adjust = "sidak")
-emmeans(current_model_beta, list(pairwise ~ ElHem|TonicSide), adjust = "sidak")
-plot(effect("TonicSide:ElHem", current_model_beta))
-emmip(current_model_beta, TonicSide ~ ElHem, CIs = TRUE)
-emmip(current_model_beta, ElHem ~ TonicSide, CIs = TRUE)
+#Model comparison - better fit without hemisphere
+current_model_timebin <- lmer(EEGPowerChange ~ as.factor(TonicSide) + Timebin + ElHem + (1|ID/Rep), REML = FALSE, data = filtered_data_beta)
+current_model_timebin_hem <- lmer(EEGPowerChange ~ as.factor(TonicSide) + Timebin * ElHem + (1|ID/Rep), REML = FALSE, data = filtered_data_beta)
+AIC(current_model_timebin, current_model_timebin_hem)
+BIC(current_model_timebin, current_model_timebin_hem)
 
 # ------------ Exporting to CSVs -------------
 # Doing multiple comparison corrections --- make sure to have run the most recent model for each first.
@@ -640,19 +480,19 @@ theta_merged_coefficients$FDR_adjusted_pvalue <- p.adjust(theta_merged_coefficie
 #------- saving
 
 adjustedRQ2data <- theta_central
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2data_141024.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2data_171024.csv"
 write.csv(adjustedRQ2data, file = file_path, row.names = TRUE)
 
 adjustedRQ2hemdata <- rbind(alpha_parietal, beta_parietal)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2hemdata_141024.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2hemdata_171024.csv"
 write.csv(adjustedRQ2hemdata, file = file_path, row.names = TRUE)
 
 all_merged_coefficients <- rbind(alpha_merged_coefficients, beta_merged_coefficients, theta_merged_coefficients)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_141024.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_171024.csv"
 write.csv(all_merged_coefficients, file = file_path, row.names = TRUE)
 
 all_merged_hems <- rbind(coefficients_hem_1, coefficients_hem_2)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_hems_141024.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_hems_171024.csv"
 write.csv(all_merged_hems, file = file_path, row.names = TRUE)
 
 # --------------- RQ2 - Covariates 
@@ -675,11 +515,20 @@ for (covariate in covariates) {
   model_summaries[[covariate]] <- current_model_summaries
 }
 
+# Doing over all alpha
+for (covariate in covariates) {
+  current_model_summaries <- list()
+    formula <- paste("EEGPowerChange ~", covariate, "+ (1 | ID/Rep)")
+    current_model <- lmer(formula, REML = FALSE, data = filtered_data_alpha)
+    current_model_summaries <- summary(current_model)
+  model_summaries[[covariate]] <- current_model_summaries
+}
+
 model_summaries
 
 ## Now adding in the congruency condition for ones that were significant alone
 
-covariates <- c("MeanInt", "MeanUn", "PupilDiameter")
+covariates <- c("MeanInt", "MeanUn")
 
 model_summaries <- list()
 
@@ -837,12 +686,22 @@ for (covariate in covariates) {
 
 model_summaries
 
+# Doing over all alpha
+for (covariate in covariates) {
+  current_model_summaries <- list()
+  formula <- paste("EEGPowerChange ~", covariate, "+ (1 | ID/Rep)")
+  current_model <- lmer(formula, REML = FALSE, data = filtered_data_theta)
+  current_model_summaries <- summary(current_model)
+  model_summaries[[covariate]] <- current_model_summaries
+}
+
+model_summaries
+
 ## Now adding in the congruency condition
 
 covariates <- c("PupilDiameter")
 
 model_summaries <- list()
-
 
 for (covariate in covariates) {
   current_model_summaries <- list()
@@ -939,6 +798,17 @@ for (covariate in covariates) {
 
 model_summaries
 
+# Doing over all alpha
+for (covariate in covariates) {
+  current_model_summaries <- list()
+  formula <- paste("EEGPowerChange ~", covariate, "+ (1 | ID/Rep)")
+  current_model <- lmer(formula, REML = FALSE, data = filtered_data_beta)
+  current_model_summaries <- summary(current_model)
+  model_summaries[[covariate]] <- current_model_summaries
+}
+
+model_summaries
+
 ## Now adding in the congruency condition
 
 covariates <- c("PupilDiameter", "MeanUn")
@@ -1016,25 +886,8 @@ summary(cov_beta_parietal)
 emmeans(cov_beta_occipital, list(pairwise ~ TonicSide), adjust = "sidak")
 emmeans(cov_beta_parietal, list(pairwise ~ TonicSide), adjust = "sidak")
 
-cov_beta_occipital2 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = beta_occipital)
-cov_beta_parietal2 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = beta_parietal)
-beta_occipital$predictedvals_pupilD <- predict(cov_beta_occipital2)
-beta_parietal$predictedvals_pupilD <- predict(cov_beta_parietal2)
-
-summary(cov_beta_occipital2)
-summary(cov_beta_parietal2)
-
-cov_beta_central1 <- lmer(EEGPowerChange~ TonicSide * PupilDiameter + (1|ID/Rep), REML = FALSE, data = beta_central)
-
-cov_beta_parietal <- lmer(EEGPowerChange~ TonicSide * MeanUn + (1|ID/Rep), REML = FALSE, data = beta_parietal)
-beta_central$predictedvals_pupilD <- predict(cov_beta_central1)
-
-emmeans(cov_beta_central, pairwise~TonicSide|PupilDiameter, adjust = "sidak")
-
-summary(cov_beta_central)
-emmip(cov_beta_central, TonicSide ~ PupilDiameter, cov.reduce = range)
-
 beta_central$predictedvals_unp <- 'na'
+beta_occipital$predictedvals_pupilD <- 'na'
 adjustedRQ2betadata <- rbind(beta_central, beta_parietal, beta_occipital)
 
 # Plotting effects
@@ -1049,8 +902,12 @@ plot(effect("PupilDiameter", cov_beta_occipital2))
 plot(effect("PupilDiameter", cov_beta_parietal2))
 
 emmip(cov_beta_parietal, TonicSide ~ MeanUn, cov.reduce = range)
-ratinglist<- list(MeanUn = seq(1.5, 6.5, by = 1))
-emmeans(cov_beta_parietal, pairwise~TonicSide|MeanUn, at = ratinglist)
+ratinglist<- list(MeanUn = c(1.8, 4.4, 6.7)) #min, mean, max
+emmeans(cov_beta_parietal, pairwise~TonicSide|MeanUn, at = ratinglist, adjust = "sidak")
+
+emmip(cov_beta_occipital, TonicSide ~ MeanUn, cov.reduce = range)
+ratinglist<- list(MeanUn = c(1.8, 4.4, 6.7)) #min, mean, max
+emmeans(cov_beta_occipital, pairwise~TonicSide|MeanUn, at = ratinglist, adjust = "sidak")
 
 # ------------- Exports -------------
 # ------- saving
@@ -1070,7 +927,7 @@ theta_cov_coefficients_table$FDR_adjusted_pvalue <- p.adjust(theta_cov_coefficie
 beta_cov_coefficients_table$FDR_adjusted_pvalue <- p.adjust(beta_cov_coefficients_table$`Pr(>|t|)`, method = "fdr")
 
 all_merged_cov_coefficients <- rbind(alpha_cov_coefficients_table, theta_cov_coefficients_table, beta_cov_coefficients_table)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_covs_1904.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_covs_1710.csv"
 write.csv(all_merged_cov_coefficients, file = file_path, row.names = TRUE)
 
 # ------------- RQ2 HemiCovs -------------
