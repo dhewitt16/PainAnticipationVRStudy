@@ -101,17 +101,17 @@ for iSub = 1:size(cfg.sub,2)
     % eeglab redraw;
 
     %% Now running ICA, starting by preparing a streamlined datafile
-    % MEEG = pop_eegfiltnew(MEEG, 'locutoff',1,'hicutoff',30); MEEG = eeg_checkset( MEEG ); %filter 1-30 hz
-    % 
-    % MEEG = pop_runica(MEEG,'runica');
-    % 
-    % pop_topoplot(MEEG, 0, [1:32] ,'Merged datasets',[6 6] ,0,'electrodes','on');
-    % 
-    % %saving ICA maps for future reference
-    % savename = [cfg.dir 'Figures/P' currentSubject '_ICAMaps.png'];
-    % saveas(gcf,savename);
-    % 
-    % pop_expica(MEEG, 'weights', [currentDirectory 'P' currentSubject '_combinedICAmatrix']);
+    MEEG = pop_eegfiltnew(MEEG, 'locutoff',1,'hicutoff',30); MEEG = eeg_checkset( MEEG ); %filter 1-30 hz
+
+    MEEG = pop_runica(MEEG,'runica');
+
+    pop_topoplot(MEEG, 0, [1:32] ,'Merged datasets',[6 6] ,0,'electrodes','on');
+
+    %saving ICA maps for future reference
+    savename = [cfg.dir 'Figures/P' currentSubject '_ICAMaps.png'];
+    saveas(gcf,savename);
+
+    pop_expica(MEEG, 'weights', [currentDirectory 'P' currentSubject '_combinedICAmatrix']);
     % %==========================================================================
 
     %% Next, the epoching around pain-related (left, right) and non-pain-related (middle) cues for each condition (1:4)
