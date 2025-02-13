@@ -30,9 +30,10 @@ freqStart = 1; freqEnd = 70;
 createStatsExports = 1;
 psdexport = [];
 psdexport.file = ('/Users/dhewitt/Data/pps/AllERD_withcsd_bl21_dpss_nofqbl_04-Mar-2024.mat');
-psdexport.bands    = [4 7; 8 12; 16 24];
-%psdexport.windows = [0 0.49; 0.5 0.99; 1 1.49; 1.5 2];
-psdexport.windows = [0 0.49; 0.5 1.59; 1.6 2.8];
+psdexport.bands    = [4 7; 8 12; 16 24; 24 32];
+psdexport.windows = [0 0.79; 0.8 1.79; 1.8 2.8];
+%psdexport.windows = [0 0.49; 0.5 1.59; 1.6 2.8];
+%psdexport.windows = [0 0.39; 0.4 0.79; 0.8 1.19; 1.2 1.59; 1.6 1.99; 2 2.39; 2.4 2.8];
 %=====================================================================
 
 if runPSD == 1
@@ -261,7 +262,7 @@ if createStatsExports == 1
 
     end
 
-    outname = [dir 'Exports/ERD/PPSERDDataWide_noav_040324.csv'];
+    outname = [dir 'Exports/ERD/PPSERDDataWide_noav_180324.csv'];
     writematrix(bigexport,outname);
     disp(['All results saved to ' outname])
 
@@ -274,7 +275,7 @@ if createStatsExports == 1
     stackedTable.Side = cellfun(@(x) x(10), stackedTable.BlockCue, 'UniformOutput', false);
     stackedTable(:, 'BlockCue') = [];
 
-    outname = [dir 'Exports/ERD/PPSERDDataLong_noav_040324.csv'];
+    outname = [dir 'Exports/ERD/PPSERDDataLong_noav_180324.csv'];
     writetable(stackedTable,outname);
     disp(['All results saved to ' outname])
 
@@ -317,7 +318,7 @@ if createStatsExports == 1
 
     end
 
-    outname = [dir 'Exports/ERD/PPSERDDataWide_040324.csv'];
+    outname = [dir 'Exports/ERD/PPSERDDataWide_180324.csv'];
     writematrix(bigexport,outname);
     disp(['Averaged results saved to ' outname])
 
@@ -328,7 +329,7 @@ if createStatsExports == 1
     stackedTable.Cue = cellfun(@(x) x(5:end), stackedTable.BlockCue, 'UniformOutput', false);
     stackedTable(:, 'BlockCue') = [];
 
-    outname = [dir 'Exports/ERD/PPSERDDataLong_040324.csv'];
+    outname = [dir 'Exports/ERD/PPSERDDataLong_180324.csv'];
     writetable(stackedTable,outname);
     disp(['Averaged results saved to ' outname])
 

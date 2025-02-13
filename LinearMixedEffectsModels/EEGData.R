@@ -235,6 +235,7 @@ emmip(current_model_parietal, Cue ~ Timebin, cov.reduce = range)
 
 emmeans(current_model_central, pairwise~Cue | Timebin, at = mylist, adjust = "sidak")
 emmeans(current_model_central, pairwise~Cue | Condition / Timebin, at = mylist, adjust = "sidak")
+emmeans(current_model_central, pairwise~Condition | Cue / Timebin, at = mylist, adjust = "sidak")
 
 ### splitting up the timebin effect to interpret diffs here
 emmeans(current_model_central, list(pairwise ~ Timebin), adjust = "sidak")
@@ -252,7 +253,7 @@ emmeans(current_model_parietal, list(pairwise ~ Cue), adjust = "sidak")
 #------- saving
 
 adjustedRQ1data <- rbind(adjustedalphadata, adjustedbetadata, adjustedthetadata)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ1data_171024.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ1data_130225.csv"
 write.csv(adjustedRQ1data, file = file_path, row.names = TRUE)
 
 # ------------- RQ2 -------------
@@ -409,6 +410,16 @@ beta_merged_coefficients$FDR_adjusted_pvalue <- p.adjust(beta_merged_coefficient
 theta_merged_coefficients <- rbind(coefficients_table2, coefficients_table5)
 theta_merged_coefficients$FDR_adjusted_pvalue <- p.adjust(theta_merged_coefficients$`Pr(>|t|)`, method = "fdr")
 
+#------- saving
+
+adjustedRQ2data <- theta_central
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2data_130225.csv"
+write.csv(adjustedRQ2data, file = file_path, row.names = TRUE)
+
+all_merged_coefficients <- rbind(alpha_merged_coefficients, beta_merged_coefficients, theta_merged_coefficients)
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_130225.csv"
+write.csv(all_merged_coefficients, file = file_path, row.names = TRUE)
+
 # ------------ Looking at hemispheric asymmetries
 
 EEGData<- read.csv("/Users/dhewitt/Data/pps/Exports/ERD/PPSERDDataLong_Grouped_noav_withratings_elhem_180324.csv")
@@ -477,22 +488,14 @@ beta_merged_coefficients$FDR_adjusted_pvalue <- p.adjust(beta_merged_coefficient
 theta_merged_coefficients <- rbind(coefficients_table2, coefficients_table5)
 theta_merged_coefficients$FDR_adjusted_pvalue <- p.adjust(theta_merged_coefficients$`Pr(>|t|)`, method = "fdr")
 
-#------- saving
-
-adjustedRQ2data <- theta_central
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2data_171024.csv"
-write.csv(adjustedRQ2data, file = file_path, row.names = TRUE)
+#------- saving hems
 
 adjustedRQ2hemdata <- rbind(alpha_parietal, beta_parietal)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2hemdata_171024.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2hemdata_130225.csv"
 write.csv(adjustedRQ2hemdata, file = file_path, row.names = TRUE)
 
-all_merged_coefficients <- rbind(alpha_merged_coefficients, beta_merged_coefficients, theta_merged_coefficients)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_171024.csv"
-write.csv(all_merged_coefficients, file = file_path, row.names = TRUE)
-
 all_merged_hems <- rbind(coefficients_hem_1, coefficients_hem_2)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_hems_171024.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_hems_130225.csv"
 write.csv(all_merged_hems, file = file_path, row.names = TRUE)
 
 # --------------- RQ2 - Covariates 
@@ -617,7 +620,7 @@ alpha_frontal$predictedvals_pupilD <- predict(cov_alpha_frontal2)
 summary(cov_alpha_frontal2)
 plot(effect("PupilDiameter", cov_alpha_frontal2))
 mylist<- list(PupilDiameter = seq(-1, 1, by = 0.5))
-emmeans(cov_alpha_frontal, pairwise~PupilDiameter, at = mylist, adjust = "sidak")
+emmeans(cov_alpha_frontal2, pairwise~PupilDiameter, at = mylist, adjust = "sidak")
 
 cov_alpha_frontal3 <- lmer(EEGPowerChange~ TonicSide * MeanInt + (1|ID/Rep), REML = FALSE, data = alpha_frontal)
 alpha_frontal$predictedvals_int <- predict(cov_alpha_frontal3)
@@ -878,6 +881,8 @@ beta_central <- EEGData %>% filter(FreqBand == 16 & ElectrodeGroup == "Central")
 
 cov_beta_occipital <- lmer(EEGPowerChange~ TonicSide * MeanUn + (1|ID/Rep), REML = FALSE, data = beta_occipital)
 cov_beta_parietal <- lmer(EEGPowerChange~ TonicSide * MeanUn + (1|ID/Rep), REML = FALSE, data = beta_parietal)
+cov_beta_central <- lmer(EEGPowerChange~ TonicSide * MeanUn + (1|ID/Rep), REML = FALSE, data = beta_central)
+
 beta_occipital$predictedvals_unp <- predict(cov_beta_occipital)
 beta_parietal$predictedvals_unp <- predict(cov_beta_parietal)
 
@@ -887,7 +892,8 @@ emmeans(cov_beta_occipital, list(pairwise ~ TonicSide), adjust = "sidak")
 emmeans(cov_beta_parietal, list(pairwise ~ TonicSide), adjust = "sidak")
 
 beta_central$predictedvals_unp <- 'na'
-beta_occipital$predictedvals_pupilD <- 'na'
+#beta_occipital$predictedvals_pupilD <- 'na' #commented this out because im no longer looking at pupilD above
+#adjustedRQ2betadata <- rbind(beta_central, beta_parietal, beta_occipital)
 adjustedRQ2betadata <- rbind(beta_central, beta_parietal, beta_occipital)
 
 # Plotting effects
@@ -913,12 +919,13 @@ emmeans(cov_beta_occipital, pairwise~TonicSide|MeanUn, at = ratinglist, adjust =
 # ------- saving
 
 adjustedRQ2betadata$predictedvals_int <- 'na'
+adjustedRQ2betadata$predictedvals_pupilD <- 'na'
 adjustedRQ2thetadata$predictedvals_int <- 'na'
 adjustedRQ2thetadata$predictedvals_unp <- 'na'
 
 adjustedRQ2covdata <- rbind(adjustedRQ2alphadata, adjustedRQ2betadata, adjustedRQ2thetadata)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2covdata_070524.csv"
-write.csv(adjustedRQ2data, file = file_path, row.names = TRUE)
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2covdata_130225.csv"
+write.csv(adjustedRQ2covdata, file = file_path, row.names = TRUE)
 
 # ---- Exporting coefficient tables
 
@@ -927,7 +934,7 @@ theta_cov_coefficients_table$FDR_adjusted_pvalue <- p.adjust(theta_cov_coefficie
 beta_cov_coefficients_table$FDR_adjusted_pvalue <- p.adjust(beta_cov_coefficients_table$`Pr(>|t|)`, method = "fdr")
 
 all_merged_cov_coefficients <- rbind(alpha_cov_coefficients_table, theta_cov_coefficients_table, beta_cov_coefficients_table)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_covs_1710.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/LME_coefficients_covs_130225.csv"
 write.csv(all_merged_cov_coefficients, file = file_path, row.names = TRUE)
 
 # ------------- RQ2 HemiCovs -------------
@@ -1049,7 +1056,7 @@ write.csv(all_merged_hemcov_coefficients, file = file_path, row.names = TRUE)
 alpha_frontal$ERD_pupilD_hem <- 'na'
 
 adjustedRQ2hemcovdata <- rbind(beta_central, alpha_frontal)
-file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2hemcovdata_070524.csv"
+file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2hemcovdata_130225.csv"
 write.csv(adjustedRQ2hemcovdata, file = file_path, row.names = TRUE)
 
 
