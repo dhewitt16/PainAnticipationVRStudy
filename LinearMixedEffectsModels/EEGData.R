@@ -407,12 +407,12 @@ alpha_merged_coefficients$FDR_adjusted_pvalue <- p.adjust(alpha_merged_coefficie
 beta_merged_coefficients <- rbind(coefficients_table3) ## add beta coef table 6 if anything sig
 beta_merged_coefficients$FDR_adjusted_pvalue <- p.adjust(beta_merged_coefficients$`Pr(>|t|)`, method = "fdr")
 
-theta_merged_coefficients <- rbind(coefficients_table2, coefficients_table5)
+theta_merged_coefficients <- rbind(coefficients_table5)
 theta_merged_coefficients$FDR_adjusted_pvalue <- p.adjust(theta_merged_coefficients$`Pr(>|t|)`, method = "fdr")
 
 #------- saving
 
-adjustedRQ2data <- theta_central
+adjustedRQ2data <- theta_frontal
 file_path <- "/Users/dhewitt/Data/pps/Exports/ERD/adjustedRQ2data_130225.csv"
 write.csv(adjustedRQ2data, file = file_path, row.names = TRUE)
 
