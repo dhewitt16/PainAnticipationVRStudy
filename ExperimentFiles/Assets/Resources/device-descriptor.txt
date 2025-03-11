@@ -1,0 +1,45 @@
+{
+  "name": "Unity VR Device",
+  "device_id": "o8Y6VNWF7orzDfPGCrJh",
+  "device_type": "Unity_C_Sharp_Client_VR",
+  "data_to_report": {
+    "left_hand_position": [ 3, "float" ],
+    "left_hand_rotation": [ 4, "float" ],
+    "right_hand_position": [ 3, "float" ],
+    "right_hand_rotation": [ 4, "float" ],
+    "head_position": [ 3, "float" ],
+    "head_rotation": [ 4, "float" ],
+    "pickable_object_attached": "string",
+    "board_command": "string",
+    "user_action": "string",
+    "slider_bar_val": "float"
+  },
+  "data_to_control": {
+    "set_player_position": [ 3, "float" ],
+    "set_player_scale": [3, "float"],
+    "switch_scene": "string",
+    "show_button_hints": "string",
+    "hide_button_hints": "string",
+    "show_ui_board": "int",
+    "set_board_title_text": "string",
+    "set_board_main_text": "string",
+    "set_board_confirm_button_text": "string",
+    "activate_confirm_button": "int",
+    "show_ui_main_session": "int",
+    "set_count_values": "float",
+    "show_slider_bar": "int",
+    "set_hand_active": "string",
+    "set_left_label": "string",
+    "set_right_label": "string",
+    "set_ratings": "int"
+  },
+  "report_pack_order": null,
+  "control_pack_order": null,
+  "visual_report": {
+    "pickable_object_attached": "static",
+    "data_rate": 60
+  },
+  "visual_control": {
+    "show_ui_board": "bool"
+  }
+}

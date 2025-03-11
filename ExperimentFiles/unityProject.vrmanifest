@@ -1,0 +1,16 @@
+{
+  "source": "Unity",
+  "applications": [
+    {
+      "app_key": "application.generated.unity.peripersonalpaindanielle.exe",
+      "launch_type": "url",
+      "url": "steam://launch/",
+      "action_manifest_path": "C:\\UnityProjects\\PeripersonalPainDanielle\\Assets\\StreamingAssets\\SteamVR\\actions.json",
+      "strings": {
+        "en_us": {
+          "name": "PeripersonalPainDanielle [Testing]"
+        }
+      }
+    }
+  ]
+}

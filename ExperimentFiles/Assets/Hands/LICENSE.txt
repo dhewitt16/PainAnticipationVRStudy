@@ -1,0 +1,8 @@
+[FREE] Oculus VR Hands Models
+Thanks for checking out the page! Here are the Oculus hand models in a .fbx file format for those of you who don't have a Maya to import into Unity.
+
+
+
+Check out my tutorial on YouTube about how to import and set these up with animations in your project.
+
+Downloaded from: https://www.patreon.com/posts/free-oculus-vr-46544401
